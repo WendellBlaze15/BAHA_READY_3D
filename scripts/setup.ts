@@ -105,7 +105,8 @@ async function mgmt(method: string, p: string, body?: unknown) {
 }
 
 async function supabaseAuth() {
-  const appUrl = env('NEXT_PUBLIC_APP_URL') ?? 'http://localhost:3000';
+  // Production URL (from the vercel step) is the Auth site URL; localhost stays allowed for dev.
+  const appUrl = env('PRODUCTION_URL') ?? env('NEXT_PUBLIC_APP_URL') ?? 'http://localhost:3000';
   const extraUrls = (env('AUTH_EXTRA_REDIRECT_URLS') ?? '')
     .split(',')
     .map((s) => s.trim())
@@ -113,7 +114,8 @@ async function supabaseAuth() {
   const allow = [
     'http://localhost:3000/**',
     `${appUrl}/**`,
-    'https://*-wendellblaze15s-projects.vercel.app/**',
+    // Vercel preview deployments of this project only.
+    'https://baha-ready-3d-*-wendellramos400-gmailcoms-projects.vercel.app/**',
     'bahaready://auth/callback',
     ...extraUrls,
   ];
@@ -299,12 +301,189 @@ async function seedStaff() {
   else log('seed:super_admin', 'warn', 'SEED_SUPERADMIN_* missing');
 }
 
+// ── Vercel ────────────────────────────────────────────────────────────
+const VERCEL_PROJECT = 'baha-ready-3d';
+const GITHUB_REPO = 'WendellBlaze15/BAHA_READY_3D';
+
+// Runtime vars only. Tooling secrets (DB password, access tokens, seed passwords, SMTP key)
+// are NEVER uploaded to Vercel.
+const VERCEL_PUBLIC_KEYS = [
+  'NEXT_PUBLIC_SUPABASE_URL',
+  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+  'NEXT_PUBLIC_VAPID_PUBLIC_KEY',
+  'NEXT_PUBLIC_SENTRY_DSN',
+  'NEXT_PUBLIC_POSTHOG_KEY',
+  'NEXT_PUBLIC_POSTHOG_HOST',
+];
+const VERCEL_SECRET_KEYS = [
+  'SUPABASE_SERVICE_ROLE_KEY',
+  'UPSTASH_REDIS_REST_URL',
+  'UPSTASH_REDIS_REST_TOKEN',
+  'BREVO_API_KEY',
+  'ATTEMPT_TOKEN_SECRET',
+  'EMAIL_WEBHOOK_SECRET',
+  'CRON_SECRET',
+  'VAPID_PRIVATE_KEY',
+  'FCM_SERVICE_ACCOUNT_JSON',
+  'SENTRY_AUTH_TOKEN',
+];
+const VERCEL_PLAIN_SERVER_KEYS = [
+  'SUPABASE_PROJECT_REF',
+  'BREVO_SENDER_EMAIL',
+  'BREVO_SENDER_NAME',
+  'BREVO_SMS_SENDER',
+  'SMS_OTP_ENABLED',
+  'WEATHER_LAT',
+  'WEATHER_LON',
+  'SENTRY_ORG',
+  'SENTRY_PROJECT',
+];
+
+async function vc(method: string, p: string, body?: unknown) {
+  const team = env('VERCEL_ORG_ID');
+  const sep = p.includes('?') ? '&' : '?';
+  const res = await fetch(`https://api.vercel.com${p}${team ? `${sep}teamId=${team}` : ''}`, {
+    method,
+    headers: { Authorization: `Bearer ${env('VERCEL_TOKEN')}`, 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const text = await res.text();
+  return {
+    ok: res.ok,
+    status: res.status,
+    json: (() => {
+      try {
+        return JSON.parse(text);
+      } catch {
+        return null;
+      }
+    })(),
+  };
+}
+
+async function vercel() {
+  if (!env('VERCEL_TOKEN'))
+    return log('vercel', 'fail', 'VERCEL_TOKEN missing (vercel.com/account/tokens)');
+  if (!env('VERCEL_ORG_ID')) {
+    const u = await vc('GET', '/v2/user');
+    if (!u.ok) return log('vercel', 'fail', `token rejected (HTTP ${u.status})`);
+    setEnvValue('VERCEL_ORG_ID', u.json.user.defaultTeamId);
+  }
+
+  // 1. Project (linked to GitHub for automatic deploys on push).
+  let project = (await vc('GET', `/v9/projects/${VERCEL_PROJECT}`)).json;
+  if (!project?.id) {
+    const settings = {
+      name: VERCEL_PROJECT,
+      framework: 'nextjs',
+      rootDirectory: 'apps/web',
+      installCommand: 'pnpm install --frozen-lockfile',
+    };
+    let created = await vc('POST', '/v11/projects', {
+      ...settings,
+      gitRepository: { type: 'github', repo: GITHUB_REPO },
+    });
+    if (!created.ok) {
+      log(
+        'vercel:git',
+        'warn',
+        `GitHub link failed (${created.json?.error?.code ?? created.status}); install the Vercel GitHub app on ${GITHUB_REPO}, then re-run`,
+      );
+      created = await vc('POST', '/v11/projects', settings);
+    }
+    if (!created.ok)
+      return log(
+        'vercel',
+        'fail',
+        `project create failed: ${created.json?.error?.message ?? created.status}`,
+      );
+    project = created.json;
+  }
+  setEnvValue('VERCEL_PROJECT_ID', project.id);
+
+  const patch = await vc('PATCH', `/v9/projects/${project.id}`, {
+    rootDirectory: 'apps/web',
+    framework: 'nextjs',
+    installCommand: 'pnpm install --frozen-lockfile',
+    nodeVersion: '22.x',
+    serverlessFunctionRegion: 'sin1',
+  });
+  if (!patch.ok)
+    log('vercel:settings', 'warn', `settings patch: ${patch.json?.error?.message ?? patch.status}`);
+
+  // 2. Production URL (first *.vercel.app domain).
+  const domains = (await vc('GET', `/v9/projects/${project.id}/domains`)).json?.domains ?? [];
+  const prodDomain: string =
+    domains.find((d: { name: string }) => d.name.endsWith('.vercel.app'))?.name ??
+    `${VERCEL_PROJECT}.vercel.app`;
+  const prodUrl = `https://${prodDomain}`;
+  setEnvValue('PRODUCTION_URL', prodUrl);
+
+  // 3. Environment variables (upsert). Secrets are "sensitive" (write-only) in prod/preview.
+  const vars: { key: string; value: string; type: string; target: string[] }[] = [];
+  const add = (
+    key: string,
+    type: 'plain' | 'encrypted' | 'sensitive',
+    target: string[],
+    value = env(key),
+  ) => {
+    if (value) vars.push({ key, value, type, target });
+  };
+  add('NEXT_PUBLIC_APP_URL', 'plain', ['production', 'preview'], prodUrl);
+  for (const k of VERCEL_PUBLIC_KEYS) add(k, 'plain', ['production', 'preview', 'development']);
+  for (const k of VERCEL_PLAIN_SERVER_KEYS)
+    add(k, 'encrypted', ['production', 'preview', 'development']);
+  for (const k of VERCEL_SECRET_KEYS) add(k, 'sensitive', ['production', 'preview']);
+  let failed = 0;
+  for (const v of vars) {
+    const r = await vc('POST', `/v10/projects/${project.id}/env?upsert=true`, v);
+    if (!r.ok) {
+      failed++;
+      console.log(`  ✘ ${v.key}: ${r.json?.error?.code ?? r.status}`);
+    }
+  }
+  log(
+    'vercel:env',
+    failed ? 'warn' : 'ok',
+    `${vars.length - failed}/${vars.length} env vars set (names only; values never printed)`,
+  );
+  log('vercel', 'ok', `project ${VERCEL_PROJECT} (root apps/web, region sin1) → ${prodUrl}`);
+}
+
+async function vercelDeploy() {
+  const projectId = env('VERCEL_PROJECT_ID');
+  if (!projectId) return log('vercel:deploy', 'fail', 'run `pnpm setup vercel` first');
+  const project = (await vc('GET', `/v9/projects/${projectId}`)).json;
+  const repoId = project?.link?.repoId;
+  if (!repoId)
+    return log(
+      'vercel:deploy',
+      'warn',
+      'project not linked to GitHub; deploy with the Vercel CLI instead',
+    );
+  const r = await vc('POST', '/v13/deployments', {
+    name: VERCEL_PROJECT,
+    project: projectId,
+    target: 'production',
+    gitSource: { type: 'github', repoId, ref: 'main' },
+  });
+  if (!r.ok)
+    return log('vercel:deploy', 'fail', `deploy failed: ${r.json?.error?.message ?? r.status}`);
+  log(
+    'vercel:deploy',
+    'ok',
+    `production deployment started: https://${r.json.url} (id ${r.json.id})`,
+  );
+}
+
 // ── main ──────────────────────────────────────────────────────────────
 const steps: Record<string, () => unknown> = {
   'check-env': checkEnv,
   generate,
   'supabase-auth': supabaseAuth,
   'seed-staff': seedStaff,
+  vercel,
+  'vercel-deploy': vercelDeploy,
 };
 
 const requested = process.argv.slice(2);
