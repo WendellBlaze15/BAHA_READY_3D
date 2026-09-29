@@ -1,0 +1,78 @@
+{
+  "meta": {
+    "title": "Baha Ready 3D",
+    "description": "A 3D game for learning flood and typhoon preparedness, from Signal No. 1 to Signal No. 5."
+  },
+  "common": {
+    "appName": "Baha Ready 3D",
+    "skipToContent": "Skip to content",
+    "loading": "Loading…",
+    "retry": "Try again",
+    "backHome": "Back to Home",
+    "language": "Language",
+    "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "Match device",
+    "saved": "Saved",
+    "cancel": "Cancel",
+    "close": "Close",
+    "signal": "Signal No. {level}"
+  },
+  "nav": {
+    "home": "Home",
+    "levels": "Levels",
+    "leaderboard": "Leaderboard",
+    "groups": "Groups",
+    "profile": "Profile",
+    "tips": "Tips",
+    "hotlines": "Hotlines",
+    "about": "About",
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "signIn": "Sign in",
+    "signUp": "Create account"
+  },
+  "landing": {
+    "eyebrow": "Pila, Laguna · Flood preparedness",
+    "headline": "Get ready before the water rises.",
+    "lede": "Pack a go-bag, prepare the house, and evacuate safely as the storm signal climbs. Every level explains what you did right and why.",
+    "playGuest": "Play as guest",
+    "createAccount": "Create account",
+    "meterLabel": "Levels from Signal No. 1 to Signal No. 5",
+    "featuresTitle": "What you'll learn",
+    "feature1Title": "A go-bag at the right weight",
+    "feature1Body": "Pick what you really need. Weight and time are limited.",
+    "feature2Title": "Safe evacuation",
+    "feature2Body": "Avoid live wires, open manholes, and strong currents.",
+    "feature3Title": "Help your neighbors",
+    "feature3Body": "Guide elderly people, children, and PWDs to the evacuation center."
+  },
+  "weather": {
+    "title": "Weather now in Pila",
+    "updated": "Updated {minutes, plural, =0 {just now} one {# minute ago} other {# minutes ago}}",
+    "unavailable": "Weather is unavailable right now."
+  },
+  "errors": {
+    "generic": "Something went wrong. Try again.",
+    "notFoundTitle": "This page doesn't exist",
+    "notFoundBody": "It may have moved or been removed. Go back to Home to continue.",
+    "errorTitle": "This page couldn't load",
+    "errorBody": "We've reported it. Try again, or go back to Home.",
+    "rate_limited": "Too many tries. Wait {seconds} seconds.",
+    "unauthenticated": "Sign in to continue.",
+    "forbidden": "You don't have permission to do this.",
+    "validation": "Some fields need fixing. Check the highlighted fields.",
+    "maintenance": "We're doing maintenance right now. Come back later.",
+    "internal": "The server had a problem. Try again later."
+  },
+  "offline": {
+    "title": "You're offline",
+    "body": "You can still play levels you've downloaded. Results will save once you're back online.",
+    "banner": "Offline — progress will save when you're back online."
+  },
+  "footer": {
+    "privacyNotice": "We follow the Data Privacy Act of 2012 (RA 10173).",
+    "verifyNotice": "Tips and hotlines are still being verified with the MDRRMO."
+  }
+}

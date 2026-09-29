@@ -1,0 +1,228 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+/* ── Brand tokens (Section 16.2) ─────────────────────────────── */
+:root {
+  --storm-slate: #1e2a38;
+  --lake: #2f6f7e;
+  --floodwater: #8a6b4a;
+  --signal-amber: #f2a516;
+  --signal-red: #d2402f;
+  --evac-green: #2e8b57;
+  --mist: #eef2f3;
+
+  /* Storm signal levels 1–5 (meter segments). Always paired with a number label. */
+  --signal-1: #3f8fd2;
+  --signal-2: #f2c416;
+  --signal-3: #f2a516;
+  --signal-4: #e0672a;
+  --signal-5: #d2402f;
+
+  --ease-out-brand: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* Semantic (shadcn-compatible) */
+  --radius: 10px;
+  --background: var(--mist);
+  --foreground: var(--storm-slate);
+  --card: #ffffff;
+  --card-foreground: var(--storm-slate);
+  --popover: #ffffff;
+  --popover-foreground: var(--storm-slate);
+  --primary: var(--lake);
+  --primary-foreground: #ffffff;
+  --secondary: #dde5e8;
+  --secondary-foreground: var(--storm-slate);
+  --muted: #dde5e8;
+  --muted-foreground: #4a5a6a;
+  --accent: #d5e6ea;
+  --accent-foreground: var(--storm-slate);
+  --destructive: var(--signal-red);
+  --success: var(--evac-green);
+  --warning: var(--signal-amber);
+  --border: #c7d2d7;
+  --input: #b5c3c9;
+  --ring: var(--signal-amber);
+  --link: var(--lake);
+  --skeleton: #d9e1e4;
+  --skeleton-shine: rgba(255, 255, 255, 0.55);
+}
+
+.dark {
+  --background: #16202b;
+  --foreground: var(--mist);
+  --card: #1e2a38;
+  --card-foreground: var(--mist);
+  --popover: #1e2a38;
+  --popover-foreground: var(--mist);
+  --primary: #3a8697;
+  --primary-foreground: #ffffff;
+  --secondary: #2a3949;
+  --secondary-foreground: var(--mist);
+  --muted: #2a3949;
+  --muted-foreground: #a9b7c2;
+  --accent: #26394a;
+  --accent-foreground: var(--mist);
+  --destructive: #e4604f;
+  --border: #33445a;
+  --input: #3d5068;
+  --link: #7fc3d1;
+  --skeleton: #243242;
+  --skeleton-shine: rgba(255, 255, 255, 0.07);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-link: var(--link);
+
+  --color-storm-slate: var(--storm-slate);
+  --color-lake: var(--lake);
+  --color-floodwater: var(--floodwater);
+  --color-signal-amber: var(--signal-amber);
+  --color-signal-red: var(--signal-red);
+  --color-evac-green: var(--evac-green);
+  --color-mist: var(--mist);
+  --color-signal-1: var(--signal-1);
+  --color-signal-2: var(--signal-2);
+  --color-signal-3: var(--signal-3);
+  --color-signal-4: var(--signal-4);
+  --color-signal-5: var(--signal-5);
+
+  --font-sans: var(--font-body), system-ui, sans-serif;
+  --font-display: var(--font-display-face), 'Arial Narrow', sans-serif;
+
+  /* Type scale 1.25 */
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 20px;
+  --text-xl: 25px;
+  --text-2xl: 31px;
+  --text-3xl: 39px;
+  --text-4xl: 49px;
+
+  /* Radius hierarchy: 4 inputs/chips · 10 panels · 20 sheets/modals */
+  --radius-sm: 4px;
+  --radius-md: 4px;
+  --radius-lg: 10px;
+  --radius-xl: 10px;
+  --radius-2xl: 20px;
+  --radius-3xl: 20px;
+
+  --ease-brand: var(--ease-out-brand);
+
+  --breakpoint-xs: 360px;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    font-size: calc(100% * var(--text-scale, 1));
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    min-height: 100dvh;
+  }
+  h1,
+  h2,
+  h3,
+  .font-display {
+    font-family: var(--font-display);
+    letter-spacing: 0.005em;
+  }
+  :focus-visible {
+    outline: 2px solid var(--signal-amber);
+    outline-offset: 2px;
+  }
+  a {
+    text-underline-offset: 3px;
+  }
+  .prose-width {
+    max-width: 75ch;
+  }
+}
+
+/* ── Skeleton shimmer: single composited transform animation ─── */
+@layer components {
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background: var(--skeleton);
+    border-radius: 4px;
+  }
+  .skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, var(--skeleton-shine), transparent);
+    animation: skeleton-shimmer 1.4s var(--ease-out-brand) infinite;
+    will-change: transform;
+  }
+  .skip-link {
+    position: absolute;
+    left: 8px;
+    top: -60px;
+    z-index: 100;
+    padding: 8px 12px;
+    border-radius: 4px;
+    background: var(--storm-slate);
+    color: var(--mist);
+    transition: transform 160ms var(--ease-out-brand);
+  }
+  .skip-link:focus {
+    transform: translateY(68px);
+  }
+}
+
+@keyframes skeleton-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
+    animation: none;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+html[data-reduced-motion='true'] *,
+html[data-reduced-motion='true'] *::before,
+html[data-reduced-motion='true'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}

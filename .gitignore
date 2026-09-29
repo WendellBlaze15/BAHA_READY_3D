@@ -1,0 +1,43 @@
+# ── Secrets (NEVER commit) ─────────────────────────────
+.env
+.env.*
+!.env.example
+*.keystore
+*.jks
+google-services.json
+GoogleService-Info.plist
+service-account*.json
+*.pem
+*.p12
+*.p8
+
+# ── Dependencies / build ───────────────────────────────
+node_modules/
+.pnpm-store/
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+next-env.d.ts
+coverage/
+
+# ── Tooling ────────────────────────────────────────────
+.vercel/
+.turbo/
+supabase/.temp/
+supabase/.branches/
+playwright-report/
+test-results/
+.lighthouseci/
+.sentryclirc
+
+# ── Mobile ─────────────────────────────────────────────
+apps/web/android/app/build/
+apps/web/ios/App/Pods/
+
+# ── OS / editor ────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.log
+.idea/

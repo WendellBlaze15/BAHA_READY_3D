@@ -1,0 +1,78 @@
+{
+  "meta": {
+    "title": "Baha Ready 3D",
+    "description": "Isang 3D na laro para matutong maghanda sa baha at bagyo, mula Signal No. 1 hanggang Signal No. 5."
+  },
+  "common": {
+    "appName": "Baha Ready 3D",
+    "skipToContent": "Lumaktaw sa nilalaman",
+    "loading": "Naglo-load…",
+    "retry": "Subukan ulit",
+    "backHome": "Bumalik sa Home",
+    "language": "Wika",
+    "theme": "Tema",
+    "themeLight": "Maliwanag",
+    "themeDark": "Madilim",
+    "themeSystem": "Sundin ang device",
+    "saved": "Na-save",
+    "cancel": "Kanselahin",
+    "close": "Isara",
+    "signal": "Signal No. {level}"
+  },
+  "nav": {
+    "home": "Home",
+    "levels": "Mga Level",
+    "leaderboard": "Leaderboard",
+    "groups": "Mga Group",
+    "profile": "Profile",
+    "tips": "Mga Tip",
+    "hotlines": "Hotlines",
+    "about": "Tungkol",
+    "privacy": "Privacy",
+    "terms": "Mga Tuntunin",
+    "signIn": "Mag-sign in",
+    "signUp": "Gumawa ng Account"
+  },
+  "landing": {
+    "eyebrow": "Pila, Laguna · Paghahanda sa baha",
+    "headline": "Maghanda bago tumaas ang tubig.",
+    "lede": "Mag-impake ng go-bag, ihanda ang bahay, at lumikas nang ligtas habang tumataas ang Signal. Bawat level, may paliwanag kung ano ang tama at kung bakit.",
+    "playGuest": "Maglaro bilang Guest",
+    "createAccount": "Gumawa ng Account",
+    "meterLabel": "Mga level mula Signal No. 1 hanggang Signal No. 5",
+    "featuresTitle": "Ano ang matututunan mo",
+    "feature1Title": "Go-bag sa tamang timbang",
+    "feature1Body": "Piliin ang mga kailangan talaga. May limitasyon ang bigat at oras.",
+    "feature2Title": "Ligtas na paglikas",
+    "feature2Body": "Iwasan ang live wire, bukas na manhole, at malakas na agos.",
+    "feature3Title": "Tulungan ang kapitbahay",
+    "feature3Body": "Samahan ang matatanda, bata, at PWD papunta sa evacuation center."
+  },
+  "weather": {
+    "title": "Panahon ngayon sa Pila",
+    "updated": "Na-update {minutes, plural, =0 {ngayon lang} other {# minuto na ang nakalipas}}",
+    "unavailable": "Hindi makuha ang panahon ngayon."
+  },
+  "errors": {
+    "generic": "May nangyaring mali. Subukan ulit.",
+    "notFoundTitle": "Walang ganitong pahina",
+    "notFoundBody": "Baka nailipat o natanggal ito. Bumalik sa Home para magpatuloy.",
+    "errorTitle": "Hindi ma-load ang pahinang ito",
+    "errorBody": "Na-report na namin ito. Subukan ulit, o bumalik sa Home.",
+    "rate_limited": "Masyadong maraming subok. Maghintay ng {seconds} segundo.",
+    "unauthenticated": "Mag-sign in muna para magpatuloy.",
+    "forbidden": "Wala kang pahintulot na gawin ito.",
+    "validation": "May mali sa inilagay mo. Tingnan ang mga field na may marka.",
+    "maintenance": "Inaayos namin ang system ngayon. Bumalik mamaya.",
+    "internal": "May problema sa server. Subukan ulit mamaya."
+  },
+  "offline": {
+    "title": "Offline ka ngayon",
+    "body": "Puwede mo pa ring laruin ang mga level na na-download na. Mase-save ang resulta kapag online ka na.",
+    "banner": "Offline — mase-save ang progress kapag online ka na."
+  },
+  "footer": {
+    "privacyNotice": "Sumusunod kami sa Data Privacy Act of 2012 (RA 10173).",
+    "verifyNotice": "Ang mga tip at hotline ay bineberipika pa kasama ang MDRRMO."
+  }
+}
