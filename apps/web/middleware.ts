@@ -1,11 +1,80 @@
 import createIntlMiddleware from 'next-intl/middleware';
-import type { NextRequest } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
 import { routing } from './i18n/routing';
+import { decide } from './lib/auth/routes';
+import type { AppClaims } from './lib/auth/claims';
 
 const intl = createIntlMiddleware(routing);
 
-export default function middleware(request: NextRequest) {
-  return intl(request);
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+// Public system flags (maintenance, staff MFA policy), cached for 60s per edge instance.
+let flagsCache: { at: number; requireStaffMfa: boolean; maintenance: boolean } | null = null;
+async function getFlags() {
+  if (flagsCache && Date.now() - flagsCache.at < 60_000) return flagsCache;
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/system_settings?select=key,value&key=in.(maintenance,require_staff_mfa)`,
+      {
+        headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` },
+        cache: 'no-store',
+      },
+    );
+    const rows = (await res.json()) as { key: string; value: unknown }[];
+    const get = (k: string) => rows.find((r) => r.key === k)?.value;
+    flagsCache = {
+      at: Date.now(),
+      // DECISION: fail closed — if the flag can't be read, MFA stays required.
+      requireStaffMfa: get('require_staff_mfa') !== false,
+      maintenance: !!(get('maintenance') as { enabled?: boolean } | undefined)?.enabled,
+    };
+  } catch {
+    flagsCache = { at: Date.now(), requireStaffMfa: true, maintenance: false };
+  }
+  return flagsCache;
+}
+
+function stripLocale(pathname: string) {
+  for (const l of routing.locales) {
+    if (pathname === `/${l}`) return { locale: l, path: '/' };
+    if (pathname.startsWith(`/${l}/`)) return { locale: l, path: pathname.slice(l.length + 1) };
+  }
+  return { locale: routing.defaultLocale, path: pathname };
+}
+
+export default async function middleware(request: NextRequest) {
+  const response = intl(request);
+  // next-intl redirect (e.g. /fil/x → /x): let it through untouched.
+  if (response.headers.get('location')) return response;
+
+  const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON, {
+    cookies: {
+      getAll: () => request.cookies.getAll(),
+      setAll: (toSet) => {
+        for (const { name, value, options } of toSet) {
+          request.cookies.set(name, value);
+          response.cookies.set(name, value, options);
+        }
+      },
+    },
+  });
+
+  // Verifies the JWT (and refreshes the session cookie when needed).
+  const { data } = await supabase.auth.getClaims();
+  const claims = (data?.claims ?? null) as AppClaims | null;
+
+  const { locale, path } = stripLocale(request.nextUrl.pathname);
+  const decision = decide(path, claims, await getFlags());
+  if (decision.action === 'allow') return response;
+
+  const prefix = locale === routing.defaultLocale ? '' : `/${locale}`;
+  const url = new URL(`${prefix}${decision.to}`, request.url);
+  const redirect = NextResponse.redirect(url);
+  // Carry refreshed auth cookies onto the redirect.
+  for (const c of response.cookies.getAll()) redirect.cookies.set(c);
+  return redirect;
 }
 
 export const config = {

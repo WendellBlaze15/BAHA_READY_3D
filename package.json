@@ -14,7 +14,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "setup": "tsx scripts/setup.ts",
-    "seed:staff": "tsx scripts/seed-staff.ts",
+    "seed:staff": "tsx scripts/setup.ts seed-staff",
     "db:types": "tsx scripts/gen-types.ts",
     "prepare": "husky",
     "test:db": "node scripts/test-db.mjs",
