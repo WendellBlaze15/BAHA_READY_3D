@@ -16,20 +16,28 @@
     "setup": "tsx scripts/setup.ts",
     "seed:staff": "tsx scripts/seed-staff.ts",
     "db:types": "tsx scripts/gen-types.ts",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test:db": "node scripts/test-db.mjs",
+    "db:push": "node scripts/with-env.mjs supabase db push",
+    "db:check-levels": "tsx scripts/check-level-configs.ts",
+    "db:advisors": "node scripts/advisors.mjs"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.3",
     "@commitlint/config-conventional": "^21.2.3",
     "@types/node": "^20.19.43",
+    "@types/pg": "^8.23.1",
     "dotenv": "^18.0.4",
     "husky": "^9.1.7",
     "lint-staged": "^17.6.0",
+    "pg": "^8.23.0",
     "prettier": "^3.9.9",
     "prettier-plugin-tailwindcss": "^0.8.1",
+    "supabase": "^2.118.0",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "vitest": "^5.0.2",
     "zod": "^4.6.5"
-  }
+  },
+  "type": "module"
 }
