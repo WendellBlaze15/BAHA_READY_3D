@@ -2,7 +2,10 @@
 
 import { useTheme } from 'next-themes';
 import { useTranslations } from 'next-intl';
+import { useQueryClient } from '@tanstack/react-query';
 import { Monitor, Moon, Sun } from 'lucide-react';
+import { qk } from '@/lib/query-keys';
+import { useUpdateSettings } from '@/lib/data/me';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -15,6 +18,14 @@ import {
 export function ThemeToggle() {
   const t = useTranslations('common');
   const { theme, setTheme } = useTheme();
+  const qc = useQueryClient();
+  const update = useUpdateSettings();
+
+  const change = (v: string) => {
+    setTheme(v);
+    // Signed in → persist so the theme follows the user to other devices.
+    if (qc.getQueryData(qk.me.settings())) update.mutate({ theme: v });
+  };
 
   return (
     <DropdownMenu>
@@ -25,7 +36,7 @@ export function ThemeToggle() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuRadioGroup value={theme ?? 'system'} onValueChange={setTheme}>
+        <DropdownMenuRadioGroup value={theme ?? 'system'} onValueChange={change}>
           <DropdownMenuRadioItem value="light">
             <Sun aria-hidden /> {t('themeLight')}
           </DropdownMenuRadioItem>

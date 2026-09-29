@@ -1,14 +1,14 @@
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
-import { HomeDashboard } from '@/components/dashboard/home-dashboard';
+import { ProfilePage } from '@/components/profile/profile-page';
 
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations('dashboard');
+  const t = await getTranslations('profilePage');
   return { title: t('title') };
 }
 
-export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
+export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
-  return <HomeDashboard />;
+  return <ProfilePage />;
 }

@@ -205,6 +205,30 @@
   }
 }
 
+/* Skeletons only appear if loading takes longer than 150ms (no flash on fast loads). */
+.skeleton-delay {
+  opacity: 0;
+  animation: skeleton-appear 1ms linear 150ms forwards;
+}
+.skeleton-delay::after {
+  animation-delay: 150ms;
+}
+@keyframes skeleton-appear {
+  to {
+    opacity: 1;
+  }
+}
+
+/* Bottom tab bar clearance on phones (safe-area aware). */
+.pb-tabbar {
+  padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
+}
+@media (min-width: 1024px) {
+  .pb-tabbar {
+    padding-bottom: 2rem;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .skeleton::after {
     animation: none;
