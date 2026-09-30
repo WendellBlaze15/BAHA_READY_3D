@@ -23,4 +23,14 @@ test.describe('auth forms', () => {
     await page.keyboard.press('Tab');
     await expect(page.getByRole('link', { name: /skip/i })).toBeFocused();
   });
+
+  test('sign-up offers a facilitator path that carries next=/apply', async ({ page }) => {
+    await page.goto('/en/sign-up');
+    await page
+      .getByRole('link', { name: /facilitator/i })
+      .first()
+      .click();
+    await expect(page).toHaveURL(/next=(%2F|\/)apply/);
+    await expect(page.getByText(/an admin approves your account/i)).toBeVisible();
+  });
 });

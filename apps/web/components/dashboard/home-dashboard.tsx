@@ -13,6 +13,7 @@ import { BlockyAvatar } from '@/components/avatar/blocky-avatar';
 import { StormSignalMeter } from '@/components/storm-signal-meter/storm-signal-meter';
 import { WeatherWidget } from '@/components/weather-widget';
 import { Skeleton, SkeletonText } from '@/components/skeletons';
+import { ApplicationBanner } from '@/components/apply/application-banner';
 import { Button } from '@/components/ui/button';
 
 export function HomeDashboard() {
@@ -52,6 +53,8 @@ export function HomeDashboard() {
           <p className="text-muted-foreground">{t('lede')}</p>
         </div>
       </header>
+
+      <ApplicationBanner />
 
       <div className="grid gap-4 lg:grid-cols-3">
         {/* Continue */}

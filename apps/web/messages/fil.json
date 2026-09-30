@@ -188,10 +188,12 @@
     "strength4": "napakalakas",
     "signOut": "Mag-sign out",
     "privacyNote": "Sa pag-sign up, sumasang-ayon ka sa aming Privacy Notice at Mga Tuntunin.",
-    "facilitatorTitle": "Guro, SK, o opisyal ng barangay?",
-    "facilitatorHow": "Gumawa muna ng account, tapos mag-apply bilang facilitator. Susuriin ng admin ang application mo (karaniwan sa loob ng 1–2 araw) at makakatanggap ka ng email kapag naaprubahan.",
-    "facilitatorCta": "Mag-sign up bilang facilitator →",
-    "facilitatorSelected": "Pagkatapos i-verify ang email mo at kumpletuhin ang profile, dadalhin ka namin diretso sa facilitator application."
+    "accountTypeLabel": "Magsa-sign up ako bilang",
+    "typePlayer": "Manlalaro",
+    "typePlayerHint": "Estudyante, residente, pamilya",
+    "typeFacilitator": "Facilitator",
+    "typeFacilitatorHint": "Guro, SK, kawani ng barangay o MDRRMO",
+    "facilitatorSteps": "Paano ito gumagana: i-verify ang email → kumpletuhin ang profile at facilitator details → aaprubahan ng admin ang account mo at makakatanggap ka ng email. Puwede kang maglaro habang naghihintay."
   },
   "mfa": {
     "title": "Two-factor authentication",
@@ -212,7 +214,7 @@
   },
   "onboarding": {
     "title": "Ihanda ang profile mo",
-    "stepOf": "Hakbang {step} sa 3",
+    "stepOf": "Hakbang {step} sa {total}",
     "step1Title": "Pumili ng username at karakter",
     "step2Title": "Wika at lugar",
     "step3Title": "Privacy at pahintulot",
@@ -241,7 +243,10 @@
       "rescuer": "Rescuer",
       "student": "Estudyante",
       "fisher": "Mangingisda"
-    }
+    },
+    "facStepTitle": "Detalye bilang facilitator",
+    "facStepLede": "Susuriin ito ng admin bago mabuksan ang facilitator tools. Admin lang ang makakakita nito.",
+    "facSubmitFailed": "Na-save ang profile mo, pero hindi naipadala ang facilitator application. Pakipadala ulit dito."
   },
   "account": {
     "suspendedTitle": "Naka-suspend ang account mo",

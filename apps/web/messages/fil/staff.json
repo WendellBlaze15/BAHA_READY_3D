@@ -19,7 +19,10 @@
     "rejectedBody": "Dahilan: {note}",
     "goToFacilitator": "Buksan ang facilitator tools",
     "applyAgain": "Mag-apply ulit",
-    "privacy": "Admin lang ang makakakita ng mga detalye at patunay mo."
+    "privacy": "Admin lang ang makakakita ng mga detalye at patunay mo.",
+    "bannerTitle": "Hinihintay pa ang pag-apruba ng facilitator account mo",
+    "bannerBody": "Sinusuri ng admin ang mga detalye mo. Awtomatikong mabubuksan ang facilitator tools kapag naaprubahan — makakatanggap ka rin ng email.",
+    "bannerLink": "Tingnan ang status"
   },
   "groupsPage": {
     "title": "Mga Group",

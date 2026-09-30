@@ -1,3 +1,9 @@
+import { z } from 'zod';
+
+// Zod v4 probes `new Function` for a JIT fast path; our CSP forbids eval (it falls back, but
+// each probe logs a CSP violation). Jitless mode skips the probe entirely.
+z.config({ jitless: true });
+
 const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
 
 type SentryModule = typeof import('@sentry/nextjs');

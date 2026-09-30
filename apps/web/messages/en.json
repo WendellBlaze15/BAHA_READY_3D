@@ -188,10 +188,12 @@
     "strength4": "very strong",
     "signOut": "Sign out",
     "privacyNote": "By signing up, you agree to our Privacy Notice and Terms.",
-    "facilitatorTitle": "Teacher, SK or barangay official?",
-    "facilitatorHow": "Create your account first, then apply as a facilitator. An admin reviews your application (usually within 1–2 days) and you'll get an email once approved.",
-    "facilitatorCta": "Sign up as a facilitator →",
-    "facilitatorSelected": "After you verify your email and finish your profile, we'll take you straight to the facilitator application."
+    "accountTypeLabel": "I'm signing up as",
+    "typePlayer": "Player",
+    "typePlayerHint": "Students, residents, families",
+    "typeFacilitator": "Facilitator",
+    "typeFacilitatorHint": "Teachers, SK, barangay or MDRRMO staff",
+    "facilitatorSteps": "How it works: verify your email → complete your profile and facilitator details → an admin approves your account and you get an email. You can play while you wait."
   },
   "mfa": {
     "title": "Two-factor authentication",
@@ -212,7 +214,7 @@
   },
   "onboarding": {
     "title": "Set up your profile",
-    "stepOf": "Step {step} of 3",
+    "stepOf": "Step {step} of {total}",
     "step1Title": "Pick a username and character",
     "step2Title": "Language and location",
     "step3Title": "Privacy and consent",
@@ -241,7 +243,10 @@
       "rescuer": "Rescuer",
       "student": "Student",
       "fisher": "Fisher"
-    }
+    },
+    "facStepTitle": "Facilitator details",
+    "facStepLede": "An admin reviews these before the facilitator tools unlock. Only admins can see them.",
+    "facSubmitFailed": "Your profile is saved, but the facilitator application didn't go through. Please send it again here."
   },
   "account": {
     "suspendedTitle": "Your account is suspended",

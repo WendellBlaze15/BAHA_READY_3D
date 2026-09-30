@@ -19,7 +19,10 @@
     "rejectedBody": "Reason: {note}",
     "goToFacilitator": "Open facilitator tools",
     "applyAgain": "Apply again",
-    "privacy": "Only admins can see your details and proof."
+    "privacy": "Only admins can see your details and proof.",
+    "bannerTitle": "Your facilitator account is awaiting approval",
+    "bannerBody": "An admin is reviewing your details. Facilitator tools unlock automatically once approved — you'll also get an email.",
+    "bannerLink": "View status"
   },
   "groupsPage": {
     "title": "Groups",

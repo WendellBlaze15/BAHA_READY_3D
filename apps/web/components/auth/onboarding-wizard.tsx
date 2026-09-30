@@ -2,6 +2,8 @@
 
 import { useEffect, useId, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
+import { useSearchParams } from 'next/navigation';
+import { toast } from 'sonner';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Check, Loader2, X } from 'lucide-react';
 import {
@@ -20,6 +22,8 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { useAuthTransition } from '@/lib/auth/auth-transition';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Select,
@@ -32,10 +36,30 @@ import { cn } from '@/lib/utils';
 import { useApiErrorText, useFieldErrorText } from './use-api-error';
 
 type Availability = 'idle' | 'checking' | 'available' | 'taken' | 'invalid';
+type StepKind = 'profile' | 'place' | 'facilitator' | 'consent';
 const OTHER = '__other__';
+
+// Mirrors the server schema in /api/applications.
+const FAC_LIMITS = {
+  full_name: [2, 120],
+  organization: [2, 160],
+  position: [2, 120],
+  contact: [5, 120],
+  reason: [10, 2000],
+} as const;
+type FacField = keyof typeof FAC_LIMITS;
+const MAX_PROOF = 5 * 1024 * 1024;
 
 export function OnboardingWizard() {
   const t = useTranslations('onboarding');
+  const ta = useTranslations('apply');
+  const params = useSearchParams();
+  const authTransition = useAuthTransition();
+  // Chose "Facilitator" at sign-up (next=/apply): the application is part of registration.
+  const asFacilitator = params.get('next') === '/apply';
+  const steps: StepKind[] = asFacilitator
+    ? ['profile', 'place', 'facilitator', 'consent']
+    : ['profile', 'place', 'consent'];
   const locale = useLocale() as 'fil' | 'en';
   const router = useRouter();
   const reduce = useReducedMotion();
@@ -54,6 +78,15 @@ export function OnboardingWizard() {
     consent: false,
   });
   const [barangayChoice, setBarangayChoice] = useState<string>('');
+  const [fac, setFac] = useState<Record<FacField, string>>({
+    full_name: '',
+    organization: '',
+    position: '',
+    contact: '',
+    reason: '',
+  });
+  const [proof, setProof] = useState<File | null>(null);
+  const [proofError, setProofError] = useState<string>();
   const [availability, setAvailability] = useState<Availability>('idle');
   const [usernameError, setUsernameError] = useState<string>();
   const [busy, setBusy] = useState(false);
@@ -87,7 +120,35 @@ export function OnboardingWizard() {
     return () => window.clearTimeout(id);
   }, [form.username, fieldText]);
 
-  const canNext = step === 1 ? availability === 'available' : step === 2 ? true : form.consent;
+  const kind = steps[step - 1] ?? 'consent';
+  const total = steps.length;
+  const facValid = (Object.keys(FAC_LIMITS) as FacField[]).every((k) => {
+    const len = fac[k].trim().length;
+    return len >= FAC_LIMITS[k][0] && len <= FAC_LIMITS[k][1];
+  });
+  const canNext =
+    kind === 'profile'
+      ? availability === 'available'
+      : kind === 'place'
+        ? true
+        : kind === 'facilitator'
+          ? facValid && !proofError
+          : form.consent;
+
+  /** Sends the facilitator application right after the profile is created. */
+  async function submitApplication() {
+    const fd = new FormData();
+    for (const k of Object.keys(FAC_LIMITS) as FacField[]) fd.set(k, fac[k].trim());
+    fd.set('website', '');
+    if (proof) fd.set('proof', proof);
+    const res = await fetch('/api/applications', {
+      method: 'POST',
+      body: fd,
+      credentials: 'same-origin',
+    });
+    // An already-pending application (409) still counts as submitted.
+    return res.ok || res.status === 409;
+  }
 
   async function finish() {
     setBusy(true);
@@ -98,10 +159,20 @@ export function OnboardingWizard() {
         username: form.username.trim(),
         barangay: barangayChoice === OTHER ? form.barangay : barangayChoice,
       });
-      const want = new URLSearchParams(window.location.search).get('next');
+      if (asFacilitator) {
+        const ok = await submitApplication().catch(() => false);
+        if (ok) {
+          authTransition('/apply'); // shows "awaiting approval"
+          return;
+        }
+        toast.error(t('facSubmitFailed'));
+        router.replace('/apply');
+        router.refresh();
+        return;
+      }
+      const want = params.get('next');
       const safe = want && want.startsWith('/') && !want.startsWith('//') ? want : res.next;
-      router.replace(safe);
-      router.refresh();
+      authTransition(safe);
     } catch (e) {
       if (e instanceof ApiClientError && e.fields.username) {
         setStep(1);
@@ -124,10 +195,10 @@ export function OnboardingWizard() {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <p className="text-muted-foreground text-sm">{t('stepOf', { step })}</p>
+        <p className="text-muted-foreground text-sm">{t('stepOf', { step, total })}</p>
         <StormSignalMeter
-          value={(step / 3) * 5}
-          label={t('stepOf', { step })}
+          value={(step / total) * 5}
+          label={t('stepOf', { step, total })}
           showNumbers={false}
           size="sm"
         />
@@ -135,7 +206,7 @@ export function OnboardingWizard() {
 
       <AnimatePresence mode="wait" initial={false}>
         <motion.div key={step} {...slide} className="space-y-5">
-          {step === 1 && (
+          {kind === 'profile' && (
             <>
               <h2 className="text-2xl font-bold">{t('step1Title')}</h2>
               <div className="space-y-1.5">
@@ -207,7 +278,7 @@ export function OnboardingWizard() {
             </>
           )}
 
-          {step === 2 && (
+          {kind === 'place' && (
             <>
               <h2 className="text-2xl font-bold">{t('step2Title')}</h2>
               <fieldset className="space-y-2">
@@ -267,7 +338,64 @@ export function OnboardingWizard() {
             </>
           )}
 
-          {step === 3 && (
+          {kind === 'facilitator' && (
+            <>
+              <div className="space-y-1">
+                <h2 className="text-2xl font-bold">{t('facStepTitle')}</h2>
+                <p className="text-muted-foreground text-sm">{t('facStepLede')}</p>
+              </div>
+              {(
+                [
+                  ['full_name', ta('fullName'), 'name'],
+                  ['organization', ta('organization'), 'organization'],
+                  ['position', ta('position'), 'organization-title'],
+                  ['contact', ta('contact'), 'tel'],
+                ] as const
+              ).map(([k, label, ac]) => (
+                <div key={k} className="space-y-1.5">
+                  <Label htmlFor={'fac-' + k}>{label}</Label>
+                  <Input
+                    id={'fac-' + k}
+                    autoComplete={ac}
+                    maxLength={FAC_LIMITS[k][1]}
+                    value={fac[k]}
+                    onChange={(e) => setFac((f) => ({ ...f, [k]: e.target.value }))}
+                    className="h-12 text-base"
+                  />
+                </div>
+              ))}
+              <div className="space-y-1.5">
+                <Label htmlFor="fac-reason">{ta('reason')}</Label>
+                <Textarea
+                  id="fac-reason"
+                  rows={3}
+                  maxLength={FAC_LIMITS.reason[1]}
+                  value={fac.reason}
+                  onChange={(e) => setFac((f) => ({ ...f, reason: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="fac-proof">{ta('proof')}</Label>
+                <Input
+                  id="fac-proof"
+                  type="file"
+                  accept="application/pdf,image/png,image/jpeg"
+                  className="h-12 py-2.5"
+                  aria-invalid={!!proofError || undefined}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0] ?? null;
+                    setProof(f);
+                    setProofError(
+                      f && f.size > MAX_PROOF ? fieldText('errors.file_too_large') : undefined,
+                    );
+                  }}
+                />
+                {proofError && <p className="text-destructive text-sm">{proofError}</p>}
+              </div>
+            </>
+          )}
+
+          {kind === 'consent' && (
             <>
               <h2 className="text-2xl font-bold">{t('step3Title')}</h2>
               <fieldset className="space-y-2">
@@ -331,7 +459,7 @@ export function OnboardingWizard() {
         >
           {t('back')}
         </Button>
-        {step < 3 ? (
+        {step < total ? (
           <Button
             type="button"
             className="min-h-12"

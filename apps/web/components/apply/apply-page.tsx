@@ -1,12 +1,11 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { CheckCircle2, Clock, Loader2, ShieldCheck, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link } from '@/i18n/navigation';
-import { getSupabaseBrowser } from '@/lib/supabase/client';
 import { qk } from '@/lib/query-keys';
 import { ApiClientError } from '@/lib/api/client';
 import { useApiErrorText, useFieldErrorText } from '@/components/auth/use-api-error';
@@ -16,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { useMyApplication } from './application-banner';
 
 export function ApplyPage() {
   const t = useTranslations('apply');
@@ -28,20 +28,7 @@ export function ApplyPage() {
   const [again, setAgain] = useState(false);
 
   // Updates live through RealtimeProvider (facilitator_applications changes → invalidate).
-  const app = useQuery({
-    queryKey: qk.me.application(),
-    queryFn: async () => {
-      const { data, error } = await getSupabaseBrowser()
-        .from('facilitator_applications')
-        .select('id, status, review_note, created_at, organization')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-    staleTime: 15_000,
-  });
+  const app = useMyApplication();
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

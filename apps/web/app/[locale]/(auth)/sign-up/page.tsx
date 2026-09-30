@@ -1,7 +1,8 @@
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
-import { Check, GraduationCap } from 'lucide-react';
+import { Check, Gamepad2, GraduationCap } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Link } from '@/i18n/navigation';
 import { EmailOtpFlow } from '@/components/auth/email-otp-flow';
 
@@ -36,26 +37,54 @@ export default async function SignUpPage({
           </li>
         ))}
       </ul>
+      <nav aria-label={t('auth.accountTypeLabel')} className="space-y-2">
+        <p className="text-sm font-medium">{t('auth.accountTypeLabel')}</p>
+        <div className="grid grid-cols-2 gap-2">
+          {(
+            [
+              [false, Gamepad2, t('auth.typePlayer'), t('auth.typePlayerHint')],
+              [true, GraduationCap, t('auth.typeFacilitator'), t('auth.typeFacilitatorHint')],
+            ] as const
+          ).map(([fac, Icon, label, hint]) => {
+            const active = fac === asFacilitator;
+            return (
+              <Link
+                key={label}
+                href={fac ? { pathname: '/sign-up', query: { next: '/apply' } } : '/sign-up'}
+                replace
+                scroll={false}
+                aria-current={active ? 'page' : undefined}
+                className={cn(
+                  'flex min-h-11 items-start gap-2.5 rounded-lg border-2 p-3 transition-colors',
+                  active
+                    ? 'border-primary bg-primary/5'
+                    : 'bg-card hover:border-foreground/25 border-transparent',
+                )}
+              >
+                <Icon
+                  className={cn(
+                    'mt-0.5 size-5 shrink-0',
+                    active ? 'text-primary' : 'text-muted-foreground',
+                  )}
+                  aria-hidden
+                />
+                <span>
+                  <span className="block text-sm font-bold">{label}</span>
+                  <span className="text-muted-foreground block text-xs leading-snug">{hint}</span>
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+        {asFacilitator && (
+          <p className="bg-muted/60 rounded-lg p-3 text-sm leading-relaxed">
+            {t('auth.facilitatorSteps')}
+          </p>
+        )}
+      </nav>
       <Suspense>
         <EmailOtpFlow mode="signup" />
       </Suspense>
-      <div className="border-primary/30 bg-primary/5 flex items-start gap-3 rounded-lg border p-4">
-        <GraduationCap className="text-primary mt-0.5 size-5 shrink-0" aria-hidden />
-        <div className="space-y-2 text-sm">
-          <p className="font-bold">{t('auth.facilitatorTitle')}</p>
-          <p className="text-muted-foreground">
-            {asFacilitator ? t('auth.facilitatorSelected') : t('auth.facilitatorHow')}
-          </p>
-          {!asFacilitator && (
-            <Link
-              href={{ pathname: '/sign-up', query: { next: '/apply' } }}
-              className="text-link inline-flex min-h-11 items-center font-bold underline"
-            >
-              {t('auth.facilitatorCta')}
-            </Link>
-          )}
-        </div>
-      </div>
       <p className="text-muted-foreground text-xs leading-relaxed">
         {t('auth.privacyNote')}{' '}
         <Link href="/privacy" className="underline">
