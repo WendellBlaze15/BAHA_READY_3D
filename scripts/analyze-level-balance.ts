@@ -91,6 +91,9 @@ for (const l of levels) {
   const lens: number[] = [];
   for (let s = 1; s <= SEEDS; s++) lens.push(routeLength(generateLayout(cfg, BigInt(s * 7919))));
   const len = median(lens);
+  // Fastest legit run: shortest seeded route, instant evacuation (~1 s), sprinting throughout.
+  const fastest = 1 + sprintTime(Math.min(...lens), a);
+  const safeMinDuration = Math.max(5, Math.floor(fastest * 0.8));
   const walkSec = len / WALK;
   const sprintSec = sprintTime(len, a);
   const saved = walkSec - sprintSec;
@@ -123,6 +126,9 @@ for (const l of levels) {
     evacTimeSec: cfg.evacTimeSec,
     proposedEvacTimeSec: proposed,
     maxExtraBonusIfUnchanged: Math.round(saved * tb),
+    minDurationSec: cfg.minDurationSec,
+    fastestLegitSec: Math.round(fastest),
+    proposedMinDurationSec: Math.min(cfg.minDurationSec, safeMinDuration),
   });
 }
 console.table(rows);
