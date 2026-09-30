@@ -5,6 +5,7 @@ import { consumeReauth } from '@/lib/auth/reauth';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { enqueueEmail } from '@/lib/email/outbox';
 import { serverBroadcast } from '@/lib/realtime/server-broadcast';
+import { rateLimit } from '@/lib/ratelimit';
 
 export const runtime = 'nodejs';
 
@@ -14,6 +15,7 @@ const schema = z.object({ user_id: z.uuid(), make_admin: z.boolean() }).strict()
 export const POST = route(async (req) => {
   assertSameOrigin(req);
   const { supabase, userId, claims } = await requireStaff('admins.manage');
+  await rateLimit('general', userId);
   if (claims.user_role !== 'super_admin') throw fail('FORBIDDEN', 'errors.forbidden');
   const body = await parseBody(req, schema);
   await consumeReauth(userId);

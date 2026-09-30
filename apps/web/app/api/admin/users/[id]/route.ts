@@ -74,16 +74,14 @@ export const POST = route<{ params: Promise<{ id: string }> }>(async (req, ctx) 
 
   // Force sign-out and MFA reset are logged explicitly (they don't touch audited tables).
   const act = async (action: string) =>
-    admin
-      .from('audit_logs')
-      .insert({
-        actor_id: userId,
-        actor_role: 'admin',
-        action,
-        target_type: 'auth.users',
-        target_id: id,
-        metadata: {},
-      });
+    admin.from('audit_logs').insert({
+      actor_id: userId,
+      actor_role: 'admin',
+      action,
+      target_type: 'auth.users',
+      target_id: id,
+      metadata: {},
+    });
 
   if (body.action === 'signout') {
     await admin.rpc('admin_revoke_sessions', { p_user_id: id });

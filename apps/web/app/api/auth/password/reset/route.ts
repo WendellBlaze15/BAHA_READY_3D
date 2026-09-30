@@ -1,6 +1,6 @@
 import { resetPasswordSchema } from '@baha/shared/auth';
-import { assertSameOrigin, fail, json, parseBody, route } from '@/lib/api/http';
-import { assertNotLocked, clearOtpFailures, recordOtpFailure } from '@/lib/ratelimit';
+import { assertSameOrigin, clientIp, fail, json, parseBody, route } from '@/lib/api/http';
+import { assertNotLocked, clearOtpFailures, rateLimit, recordOtpFailure } from '@/lib/ratelimit';
 import { getSupabaseServer } from '@/lib/supabase/server';
 import { MIN_PASSWORD_SCORE, passwordScore } from '@/lib/auth/password-strength';
 import { nextStepAfterSignIn } from '@/lib/auth/post-signin';
@@ -9,6 +9,7 @@ export const runtime = 'nodejs';
 
 export const POST = route(async (req) => {
   assertSameOrigin(req);
+  await rateLimit('otp_request_ip', clientIp(req));
   const body = await parseBody(req, resetPasswordSchema);
 
   if (passwordScore(body.password, [body.email]) < MIN_PASSWORD_SCORE) {

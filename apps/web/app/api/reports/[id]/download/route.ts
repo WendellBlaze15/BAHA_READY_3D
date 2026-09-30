@@ -1,12 +1,14 @@
 import { fail, route } from '@/lib/api/http';
 import { requireUser } from '@/lib/auth/session';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
+import { rateLimit } from '@/lib/ratelimit';
 
 export const runtime = 'nodejs';
 
 /** Redirects the requester to a 10-minute signed URL for their own report. */
 export const GET = route<{ params: Promise<{ id: string }> }>(async (_req, ctx) => {
-  const { supabase } = await requireUser();
+  const { supabase, userId } = await requireUser();
+  await rateLimit('report_export', userId);
   const { id } = await ctx.params;
   // RLS: requesters can only read their own jobs.
   const { data: job } = await supabase

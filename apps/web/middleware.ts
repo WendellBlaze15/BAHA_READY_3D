@@ -1,9 +1,10 @@
 import createIntlMiddleware from 'next-intl/middleware';
-import { NextResponse, type NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { routing } from './i18n/routing';
 import { decide } from './lib/auth/routes';
 import type { AppClaims } from './lib/auth/claims';
+import { buildCsp, makeNonce } from './lib/security/csp';
 
 const intl = createIntlMiddleware(routing);
 
@@ -44,8 +45,20 @@ function stripLocale(pathname: string) {
   return { locale: routing.defaultLocale, path: pathname };
 }
 
-export default async function middleware(request: NextRequest) {
+export default async function middleware(incoming: NextRequest) {
+  // Nonce CSP: Next reads the nonce from the request's CSP header and applies it to its scripts.
+  const nonce = makeNonce();
+  const csp = buildCsp(nonce, {
+    dev: process.env.NODE_ENV !== 'production',
+    supabaseUrl: SUPABASE_URL,
+  });
+  const reqHeaders = new Headers(incoming.headers);
+  reqHeaders.set('x-nonce', nonce);
+  reqHeaders.set('content-security-policy', csp);
+  const request = new NextRequest(incoming, { headers: reqHeaders });
+
   const response = intl(request);
+  response.headers.set('content-security-policy', csp);
   // next-intl redirect (e.g. /fil/x → /x): let it through untouched.
   if (response.headers.get('location')) return response;
 
@@ -72,6 +85,7 @@ export default async function middleware(request: NextRequest) {
   const prefix = locale === routing.defaultLocale ? '' : `/${locale}`;
   const url = new URL(`${prefix}${decision.to}`, request.url);
   const redirect = NextResponse.redirect(url);
+  redirect.headers.set('content-security-policy', csp);
   // Carry refreshed auth cookies onto the redirect.
   for (const c of response.cookies.getAll()) redirect.cookies.set(c);
   return redirect;

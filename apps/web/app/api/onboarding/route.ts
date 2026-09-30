@@ -3,12 +3,14 @@ import { assertSameOrigin, fail, json, parseBody, route } from '@/lib/api/http';
 import { requireUser } from '@/lib/auth/session';
 import { presetAvatarConfig } from '@/lib/avatar/presets';
 import { enqueueEmail } from '@/lib/email/outbox';
+import { rateLimit } from '@/lib/ratelimit';
 
 export const runtime = 'nodejs';
 
 export const POST = route(async (req) => {
   assertSameOrigin(req);
   const { supabase, claims, userId } = await requireUser();
+  await rateLimit('general', userId);
   const body = await parseBody(req, onboardingSchema);
 
   const { data: available } = await supabase.rpc('is_username_available', {

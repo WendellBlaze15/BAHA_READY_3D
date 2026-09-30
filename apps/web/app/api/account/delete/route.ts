@@ -3,6 +3,7 @@ import { requireUser } from '@/lib/auth/session';
 import { consumeReauth } from '@/lib/auth/reauth';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { enqueueEmail } from '@/lib/email/outbox';
+import { rateLimit } from '@/lib/ratelimit';
 
 export const runtime = 'nodejs';
 
@@ -13,6 +14,7 @@ export const runtime = 'nodejs';
 export const POST = route(async (req) => {
   assertSameOrigin(req);
   const { supabase, userId, claims } = await requireUser();
+  await rateLimit('general', userId);
   await consumeReauth(userId);
 
   if (claims.user_role === 'super_admin') {

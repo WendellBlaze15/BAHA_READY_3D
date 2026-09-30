@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { Atkinson_Hyperlegible, Barlow_Condensed } from 'next/font/google';
 import { hasLocale, NextIntlClientProvider } from 'next-intl';
@@ -63,6 +64,7 @@ export default async function LocaleLayout({
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'common' });
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
 
   return (
     <html lang={locale} suppressHydrationWarning className={`${display.variable} ${body.variable}`}>
@@ -71,7 +73,7 @@ export default async function LocaleLayout({
           {t('skipToContent')}
         </a>
         <NextIntlClientProvider>
-          <Providers>
+          <Providers nonce={nonce}>
             <OfflineBanner />
             {children}
           </Providers>
