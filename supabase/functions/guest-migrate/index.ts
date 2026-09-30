@@ -74,13 +74,11 @@ serve(async (req) => {
       events: g.events,
       clientSummary: g.client_summary,
     });
-    await admin
-      .from('attempt_events')
-      .insert({
-        attempt_id: attempt.id,
-        events: g.events,
-        byte_size: JSON.stringify(g.events).length,
-      });
+    await admin.from('attempt_events').insert({
+      attempt_id: attempt.id,
+      events: g.events,
+      byte_size: JSON.stringify(g.events).length,
+    });
     imported.push({ level_id: g.level_id, score: result.score, stars: result.stars });
   }
   return json(req, { imported, discarded });
