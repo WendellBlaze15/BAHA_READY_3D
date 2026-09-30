@@ -27,6 +27,7 @@ import { PRIMARY_TABS, isActive, sectionsFor, type NavSection } from './nav-conf
 import { SettingsApplier } from './settings-applier';
 import { OfflineSync } from '@/lib/offline/offline-sync';
 import { PushAndUpdates } from '@/lib/push/push-client';
+import { NativeBridge } from '@/lib/native/native-bridge';
 import { UserMenu } from './user-menu';
 
 export function ShellClient({
@@ -62,6 +63,7 @@ export function ShellClient({
     <RealtimeProvider userId={claims.sub} groupIds={groupIds}>
       <OfflineSync />
       <PushAndUpdates />
+      <NativeBridge />
       <SettingsApplier />
       {immersive ? (
         children

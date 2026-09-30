@@ -26,3 +26,33 @@ for (const [name, size, svg] of jobs) {
   await sharp(Buffer.from(svg)).resize(size, size).png().toFile(`${out}/${name}`);
   console.log('✔', name);
 }
+
+// Android launcher icons (Capacitor project). Adaptive foreground = 108dp canvas, 66dp safe zone.
+const res = 'apps/mobile/android/app/src/main/res';
+const densities = { mdpi: 1, hdpi: 1.5, xhdpi: 2, xxhdpi: 3, xxxhdpi: 4 };
+const fs = await import('node:fs');
+if (fs.existsSync(res)) {
+  for (const [d, k] of Object.entries(densities)) {
+    const dir = `${res}/mipmap-${d}`;
+    await sharp(Buffer.from(mark(3, true)))
+      .resize(48 * k, 48 * k)
+      .png()
+      .toFile(`${dir}/ic_launcher.png`);
+    const round = Buffer.from(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${48 * k}" height="${48 * k}"><circle cx="50%" cy="50%" r="50%" fill="#fff"/></svg>`,
+    );
+    await sharp(Buffer.from(mark(5, true)))
+      .resize(48 * k, 48 * k)
+      .composite([{ input: round, blend: 'dest-in' }])
+      .png()
+      .toFile(`${dir}/ic_launcher_round.png`);
+    await sharp(Buffer.from(mark(9, true)))
+      .resize(108 * k, 108 * k)
+      .png()
+      .toFile(`${dir}/ic_launcher_foreground.png`);
+  }
+  const bg = `${res}/values/ic_launcher_background.xml`;
+  if (fs.existsSync(bg))
+    fs.writeFileSync(bg, fs.readFileSync(bg, 'utf8').replace(/#[0-9A-Fa-f]{6}/, '#1E2A38'));
+  console.log('✔ android mipmaps');
+}

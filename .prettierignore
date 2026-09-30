@@ -5,3 +5,4 @@ supabase/.temp
 apps/web/lib/supabase/database.types.ts
 *.md
 supabase/functions/_shared/shared
+apps/mobile/android

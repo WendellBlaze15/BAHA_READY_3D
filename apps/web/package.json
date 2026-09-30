@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@baha/shared": "workspace:*",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/core": "^8.5.2",
     "@hookform/resolvers": "^5.9.1",
     "@next/env": "15.5.26",
     "@react-pdf/renderer": "^4.9.0",

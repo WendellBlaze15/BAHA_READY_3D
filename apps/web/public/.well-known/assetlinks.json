@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "ph.bahaready.app",
+      "sha256_cert_fingerprints": [
+        "28:E7:DA:B0:6D:73:C2:E6:D0:CB:47:D6:12:D2:C6:BF:92:CF:FA:B1:88:06:69:15:8D:F8:66:EF:E2:1A:27:BA"
+      ]
+    }
+  }
+]

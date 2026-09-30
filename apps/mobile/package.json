@@ -1,0 +1,25 @@
+{
+  "name": "@baha/mobile",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "sync": "cap sync android",
+    "open": "cap open android",
+    "build:android": "node ../../scripts/with-env.mjs node scripts/build-android.mjs",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/push-notifications": "^8.1.2",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
+    "@types/node": "^20.19.43",
+    "typescript": "^7.0.2"
+  }
+}

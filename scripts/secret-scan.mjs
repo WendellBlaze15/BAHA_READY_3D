@@ -18,6 +18,8 @@ const PATTERNS = [
 
 // Config values that are not secrets and may legitimately appear in code.
 const NON_SECRET = new Set([
+  'ANDROID_KEYSTORE_PATH',
+  'ANDROID_KEY_ALIAS',
   'BREVO_SENDER_NAME',
   'BREVO_SMS_SENDER',
   'SMS_OTP_ENABLED',

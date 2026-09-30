@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Baha Ready 3D</string>
+    <string name="title_activity_main">Baha Ready 3D</string>
+    <string name="package_name">ph.bahaready.app</string>
+    <string name="custom_url_scheme">ph.bahaready.app</string>
+</resources>
