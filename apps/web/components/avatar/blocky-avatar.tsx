@@ -69,7 +69,14 @@ export function BlockyAvatar({
         <rect x="22" y="46" width="20" height="22" rx="1.5" fill="#EEF2F3" />
       )}
       {c.accessory?.startsWith('backpack') && (
-        <rect x="42" y="42" width="6" height="18" rx="1.5" fill="#1F3A93" />
+        <rect
+          x="42"
+          y="42"
+          width="6"
+          height="18"
+          rx="1.5"
+          fill={c.accessory === 'backpack_orange' ? '#E0672A' : '#1F3A93'}
+        />
       )}
       {/* head */}
       <rect x="17" y="8" width="30" height="30" rx="4" fill={c.skin} />
@@ -83,7 +90,11 @@ export function BlockyAvatar({
       <rect x="24" y="19" width="4" height="5" rx="1" fill="#1E2A38" />
       <rect x="36" y="19" width="4" height="5" rx="1" fill="#1E2A38" />
       <path d={mouth} stroke="#1E2A38" strokeWidth="2" fill="none" strokeLinecap="round" />
+      {c.accessory === 'badge_flame' && <rect x="35" y="44" width="5" height="6" fill="#E0672A" />}
+      {c.accessory === 'headlamp' && <rect x="29" y="8" width="6" height="4" fill="#FFF4C2" />}
       {/* hats */}
+      {c.hat === 'cap_blue' && <rect x="16" y="4" width="32" height="9" rx="3" fill="#3F8FD2" />}
+      {c.hat === 'grad_cap' && <rect x="12" y="3" width="40" height="4" fill="#1E2A38" />}
       {c.hat === 'cap_red' && (
         <>
           <rect x="16" y="4" width="32" height="9" rx="3" fill="#D2402F" />

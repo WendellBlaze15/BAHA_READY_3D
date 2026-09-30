@@ -1,1 +1,112 @@
-{}
+{
+  "levels": {
+    "title": "Storm Map",
+    "lede": "Tumataas ang Signal sa bawat level. Mas maikli ang oras, mas mabilis tumaas ang tubig.",
+    "locked": "Naka-lock",
+    "lockedHint": "Makakuha ng kahit 1 bituin sa nakaraang level para ma-unlock.",
+    "best": "Best: {score}",
+    "notPlayed": "Hindi pa nalalaro",
+    "attempts": "{count, plural, =0 {Wala pang laro} one {# laro} other {# laro}}",
+    "startLevel": "Simulan ang Level",
+    "briefing": "Briefing",
+    "prep": "Paghahanda",
+    "evac": "Paglikas",
+    "limit": "Limit",
+    "hazards": "Mga panganib",
+    "neighbors": "Kapitbahay na tutulungan",
+    "night": "Gabi at brownout",
+    "lightning": "May kidlat",
+    "none": "Wala",
+    "lockedToast": "Naka-lock pa ang level na iyon."
+  },
+  "leaderboard": {
+    "title": "Leaderboard",
+    "lede": "Username lang ang ipinapakita. Nag-a-update ito nang live.",
+    "scope": { "global": "Lahat", "level": "Level", "barangay": "Barangay", "group": "Group" },
+    "period": {
+      "weekly": "Ngayong linggo",
+      "all_time": "Lahat ng panahon",
+      "daily": "Ngayong araw"
+    },
+    "rank": "Ranggo",
+    "player": "Manlalaro",
+    "score": "Score",
+    "you": "Ikaw",
+    "yourRank": "Ang ranggo mo",
+    "notRanked": "Wala ka pa sa leaderboard na ito. Maglaro para makasali!",
+    "empty": "Wala pang nakalista rito. Ikaw na ang mauna!",
+    "noBarangay": "Ilagay ang barangay mo sa Profile para makita ang leaderboard ng barangay.",
+    "noGroup": "Sumali muna sa isang group.",
+    "chooseLevel": "Pumili ng level",
+    "chooseGroup": "Pumili ng group",
+    "loadMore": "Magpakita pa",
+    "live": "Live"
+  },
+  "daily": {
+    "title": "Daily Challenge",
+    "lede": "Iisang senaryo para sa lahat ngayong araw. Magre-reset sa hatinggabi (oras sa Maynila).",
+    "today": "Ngayong araw: {level}",
+    "modifiers": "Mga pagbabago ngayon",
+    "rainBoost": "Mas malakas na ulan",
+    "riseBoost": "Mas mabilis tumaas ang tubig",
+    "night": "Gabi",
+    "play": "Laruin ang daily challenge",
+    "streak": "Streak mo",
+    "streakBody": "Maglaro araw-araw para mapanatili ang streak. 7 araw = Tuloy-tuloy badge!",
+    "none": "Wala pang daily challenge ngayong araw."
+  },
+  "achievementsPage": {
+    "title": "Mga Achievement",
+    "lede": "Makakuha ng badge at bagong gamit para sa avatar mo — walang bayad, galing sa galing mo.",
+    "earned": "Nakuha noong {date}",
+    "locked": "Hindi pa nakukuha",
+    "reward": "Gantimpala: bagong gamit sa Avatar Studio",
+    "progress": "{earned} sa {total} ang nakuha"
+  },
+  "avatar": {
+    "title": "Avatar Studio",
+    "lede": "I-customize ang blocky character mo. Ito ang gagamitin mo sa laro at leaderboard.",
+    "skin": "Balat",
+    "hair": "Buhok",
+    "hairStyle": "Estilo ng buhok",
+    "shirt": "Damit",
+    "pants": "Pantalon",
+    "shoes": "Sapatos",
+    "hat": "Sombrero",
+    "accessory": "Accessory",
+    "face": "Mukha",
+    "none": "Wala",
+    "save": "I-save ang avatar",
+    "saved": "Na-save ang avatar",
+    "lockedItem": "Naka-lock: makuha sa isang achievement",
+    "rotate": "I-drag para iikot",
+    "styles": {
+      "short": "Maikli",
+      "long": "Mahaba",
+      "cap": "Naka-cap",
+      "bun": "Bun",
+      "buzz": "Kalbo-kalbo"
+    },
+    "faces": {
+      "smile": "Nakangiti",
+      "grin": "Masaya",
+      "calm": "Kalmado",
+      "determined": "Determinado"
+    },
+    "hats": {
+      "cap_red": "Pulang cap",
+      "cap_blue": "Asul na cap",
+      "helmet_yellow": "Rescue helmet",
+      "salakot": "Salakot",
+      "grad_cap": "Toga cap"
+    },
+    "accessories": {
+      "backpack_blue": "Asul na backpack",
+      "backpack_orange": "Orange na go-bag",
+      "vest_reflective": "Reflective vest",
+      "apron": "Apron",
+      "badge_flame": "Streak badge",
+      "headlamp": "Headlamp"
+    }
+  }
+}

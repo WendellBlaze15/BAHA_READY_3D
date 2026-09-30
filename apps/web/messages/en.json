@@ -124,12 +124,18 @@
     "onboarding_required": "Finish setting up your profile first.",
     "last_super_admin": "The last super admin account cannot be deleted.",
     "conflict": "The data changed. Refresh and try again.",
-    "not_found": "Not found."
+    "not_found": "Not found.",
+    "level_locked": "This level is still locked. Finish the previous one first.",
+    "daily_mismatch": "The daily challenge changed. Refresh the page.",
+    "attempt_closed": "This game has already ended.",
+    "attempt_token_invalid": "The game session expired. Start again."
   },
   "offline": {
     "title": "You're offline",
     "body": "You can still play levels you've downloaded. Results will save once you're back online.",
-    "banner": "Offline — progress will save when you're back online."
+    "banner": "Offline — progress will save when you're back online.",
+    "synced": "Saved {count, plural, one {# result} other {# results}} you played while offline.",
+    "guestMigrated": "Your guest progress was moved to your account."
   },
   "footer": {
     "privacyNotice": "We follow the Data Privacy Act of 2012 (RA 10173).",

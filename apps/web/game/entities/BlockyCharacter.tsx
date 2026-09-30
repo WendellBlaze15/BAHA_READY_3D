@@ -51,14 +51,15 @@ export const BlockyCharacter = forwardRef<
       body.current.position.y = 1.05 + Math.abs(Math.sin(phase.current)) * Math.min(0.05, s * 0.01);
   });
 
-  const hatColor =
-    c.hat === 'cap_red'
-      ? '#D2402F'
-      : c.hat === 'helmet_yellow'
-        ? '#F2C416'
-        : c.hat === 'salakot'
-          ? '#C9A66B'
-          : null;
+  const HAT_COLORS: Record<string, string> = {
+    cap_red: '#D2402F',
+    cap_blue: '#3F8FD2',
+    helmet_yellow: '#F2C416',
+    salakot: '#C9A66B',
+    grad_cap: '#1E2A38',
+  };
+  const hatColor = c.hat ? (HAT_COLORS[c.hat] ?? null) : null;
+  const backpack = c.accessory === 'backpack_orange' ? '#E0672A' : '#1F3A93';
 
   return (
     <group ref={ref} scale={scale}>
@@ -91,7 +92,25 @@ export const BlockyCharacter = forwardRef<
       {c.accessory?.startsWith('backpack') && (
         <mesh position={[0, 1.08, -0.24]}>
           <boxGeometry args={[0.42, 0.5, 0.18]} />
-          <meshLambertMaterial color="#1F3A93" />
+          <meshLambertMaterial color={backpack} />
+        </mesh>
+      )}
+      {c.accessory === 'badge_flame' && (
+        <mesh position={[0.15, 1.2, 0.16]}>
+          <boxGeometry args={[0.12, 0.14, 0.02]} />
+          <meshBasicMaterial color="#E0672A" />
+        </mesh>
+      )}
+      {c.accessory === 'apron' && (
+        <mesh position={[0, 0.95, 0.16]}>
+          <boxGeometry args={[0.44, 0.5, 0.02]} />
+          <meshLambertMaterial color="#EEF2F3" />
+        </mesh>
+      )}
+      {c.accessory === 'headlamp' && (
+        <mesh position={[0, 1.78, 0.24]}>
+          <boxGeometry args={[0.12, 0.08, 0.04]} />
+          <meshBasicMaterial color="#FFF4C2" />
         </mesh>
       )}
       {/* arms (pivot at shoulder) */}

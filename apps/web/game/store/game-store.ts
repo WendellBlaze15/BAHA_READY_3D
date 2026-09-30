@@ -8,6 +8,14 @@ import type { LevelConfig } from '@baha/shared/level-config';
 export type Phase = 'loading' | 'briefing' | 'countdown' | 'prep' | 'evac' | 'ended';
 export type Quality = 'low' | 'medium' | 'high';
 
+export type TextEntry = { name: string; explanation: string };
+export type GameTexts = {
+  items: Record<string, TextEntry>;
+  tasks: Record<string, TextEntry>;
+  hazards: Record<string, TextEntry>;
+  npcs: Record<string, TextEntry>;
+};
+
 export type HintKind = 'info' | 'warn' | 'danger' | 'success';
 export type Hint = { id: number; text: string; kind: HintKind };
 
@@ -36,6 +44,7 @@ export type GameState = {
   layout: Layout | null;
   seed: string;
   guest: boolean;
+  texts: GameTexts;
   quality: Quality;
   phase: Phase;
   paused: boolean;
@@ -66,7 +75,7 @@ type Actions = {
   init: (
     p: Pick<
       GameState,
-      'levelSlug' | 'config' | 'content' | 'layout' | 'seed' | 'guest' | 'quality'
+      'levelSlug' | 'config' | 'content' | 'layout' | 'seed' | 'guest' | 'quality' | 'texts'
     >,
   ) => void;
   setPhase: (phase: Phase) => void;
@@ -93,6 +102,7 @@ const initial: GameState = {
   layout: null,
   seed: '0',
   guest: true,
+  texts: { items: {}, tasks: {}, hazards: {}, npcs: {} },
   quality: 'medium',
   phase: 'loading',
   paused: false,

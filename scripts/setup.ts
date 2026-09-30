@@ -476,6 +476,34 @@ async function vercelDeploy() {
   );
 }
 
+// ── Edge Function secrets ─────────────────────────────────────────────
+async function functionsSecrets() {
+  const origins = [env('PRODUCTION_URL'), 'http://localhost:3000'].filter(Boolean).join(',');
+  const pairs: [string, string | undefined][] = [
+    ['ATTEMPT_TOKEN_SECRET', env('ATTEMPT_TOKEN_SECRET')],
+    ['UPSTASH_REDIS_REST_URL', env('UPSTASH_REDIS_REST_URL')],
+    ['UPSTASH_REDIS_REST_TOKEN', env('UPSTASH_REDIS_REST_TOKEN')],
+    ['BREVO_API_KEY', env('BREVO_API_KEY')],
+    ['BREVO_SENDER_EMAIL', env('BREVO_SENDER_EMAIL')],
+    ['BREVO_SENDER_NAME', env('BREVO_SENDER_NAME')],
+    ['EMAIL_WEBHOOK_SECRET', env('EMAIL_WEBHOOK_SECRET')],
+    ['CRON_SECRET', env('CRON_SECRET')],
+    ['VAPID_PRIVATE_KEY', env('VAPID_PRIVATE_KEY')],
+    ['VAPID_PUBLIC_KEY', env('NEXT_PUBLIC_VAPID_PUBLIC_KEY')],
+    ['FCM_SERVICE_ACCOUNT_JSON', env('FCM_SERVICE_ACCOUNT_JSON')],
+    ['APP_ORIGINS', origins],
+    ['APP_URL', env('PRODUCTION_URL') ?? env('NEXT_PUBLIC_APP_URL')],
+  ];
+  const secrets = pairs.filter(([, v]) => !!v).map(([name, value]) => ({ name, value: value! }));
+  const r = await mgmt('POST', '/secrets', secrets);
+  if (!r.ok) return log('functions:secrets', 'fail', `HTTP ${r.status}: ${r.text.slice(0, 160)}`);
+  log(
+    'functions:secrets',
+    'ok',
+    `${secrets.length} secrets set: ${secrets.map((s) => s.name).join(', ')}`,
+  );
+}
+
 // ── main ──────────────────────────────────────────────────────────────
 const steps: Record<string, () => unknown> = {
   'check-env': checkEnv,
@@ -484,6 +512,7 @@ const steps: Record<string, () => unknown> = {
   'seed-staff': seedStaff,
   vercel,
   'vercel-deploy': vercelDeploy,
+  'functions-secrets': functionsSecrets,
 };
 
 const requested = process.argv.slice(2);

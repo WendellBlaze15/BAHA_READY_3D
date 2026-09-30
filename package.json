@@ -20,7 +20,9 @@
     "test:db": "node scripts/test-db.mjs",
     "db:push": "node scripts/with-env.mjs supabase db push",
     "db:check-levels": "tsx scripts/check-level-configs.ts",
-    "db:advisors": "node scripts/advisors.mjs"
+    "db:advisors": "node scripts/advisors.mjs",
+    "functions:sync": "node scripts/sync-functions-shared.mjs",
+    "functions:deploy": "node scripts/sync-functions-shared.mjs && node scripts/with-env.mjs supabase functions deploy --use-api"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.3",

@@ -124,12 +124,18 @@
     "onboarding_required": "Tapusin muna ang pag-set up ng profile.",
     "last_super_admin": "Hindi puwedeng burahin ang huling super admin account.",
     "conflict": "May salungatan sa data. I-refresh at subukan ulit.",
-    "not_found": "Hindi nakita."
+    "not_found": "Hindi nakita.",
+    "level_locked": "Naka-lock pa ang level na ito. Tapusin muna ang nauna.",
+    "daily_mismatch": "Nagbago na ang daily challenge. I-refresh ang pahina.",
+    "attempt_closed": "Tapos na ang larong ito.",
+    "attempt_token_invalid": "Nag-expire ang session ng laro. Magsimula ulit."
   },
   "offline": {
     "title": "Offline ka ngayon",
     "body": "Puwede mo pa ring laruin ang mga level na na-download na. Mase-save ang resulta kapag online ka na.",
-    "banner": "Offline — mase-save ang progress kapag online ka na."
+    "banner": "Offline — mase-save ang progress kapag online ka na.",
+    "synced": "Na-save na ang {count, plural, one {# resulta} other {# resulta}} na nilaro mo habang offline.",
+    "guestMigrated": "Nailipat na sa account mo ang progress mo bilang guest."
   },
   "footer": {
     "privacyNotice": "Sumusunod kami sa Data Privacy Act of 2012 (RA 10173).",

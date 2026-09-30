@@ -49,6 +49,7 @@ export function updateNearby() {
       bestD = d;
     }
   }
+  live.interactTarget = best ? { kind: best.kind, key: best.key, label: best.label } : null;
   const cur = useNearby.getState().nearby;
   if ((best?.id ?? null) !== (cur?.id ?? null) || (best && cur && best.label !== cur.label)) {
     useNearby.setState({

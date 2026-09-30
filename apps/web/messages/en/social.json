@@ -1,1 +1,97 @@
-{}
+{
+  "levels": {
+    "title": "Storm Map",
+    "lede": "The Signal rises with every level. Less time, faster-rising water.",
+    "locked": "Locked",
+    "lockedHint": "Earn at least 1 star on the previous level to unlock.",
+    "best": "Best: {score}",
+    "notPlayed": "Not played yet",
+    "attempts": "{count, plural, =0 {No games yet} one {# game} other {# games}}",
+    "startLevel": "Start level",
+    "briefing": "Briefing",
+    "prep": "Prep",
+    "evac": "Evacuation",
+    "limit": "Limit",
+    "hazards": "Hazards",
+    "neighbors": "Neighbors to help",
+    "night": "Night and brownout",
+    "lightning": "Lightning",
+    "none": "None",
+    "lockedToast": "That level is still locked."
+  },
+  "leaderboard": {
+    "title": "Leaderboard",
+    "lede": "Only usernames are shown. It updates live.",
+    "scope": { "global": "Global", "level": "Level", "barangay": "Barangay", "group": "Group" },
+    "period": { "weekly": "This week", "all_time": "All time", "daily": "Today" },
+    "rank": "Rank",
+    "player": "Player",
+    "score": "Score",
+    "you": "You",
+    "yourRank": "Your rank",
+    "notRanked": "You're not on this leaderboard yet. Play to join!",
+    "empty": "Nobody here yet. Be the first!",
+    "noBarangay": "Add your barangay in Profile to see your barangay's leaderboard.",
+    "noGroup": "Join a group first.",
+    "chooseLevel": "Choose a level",
+    "chooseGroup": "Choose a group",
+    "loadMore": "Show more",
+    "live": "Live"
+  },
+  "daily": {
+    "title": "Daily Challenge",
+    "lede": "One scenario for everyone today. Resets at midnight (Manila time).",
+    "today": "Today: {level}",
+    "modifiers": "Today's twists",
+    "rainBoost": "Heavier rain",
+    "riseBoost": "Faster-rising water",
+    "night": "Night",
+    "play": "Play the daily challenge",
+    "streak": "Your streak",
+    "streakBody": "Play every day to keep your streak. 7 days = On a Roll badge!",
+    "none": "No daily challenge yet today."
+  },
+  "achievementsPage": {
+    "title": "Achievements",
+    "lede": "Earn badges and new avatar items — free, earned by skill.",
+    "earned": "Earned on {date}",
+    "locked": "Not earned yet",
+    "reward": "Reward: a new item in Avatar Studio",
+    "progress": "{earned} of {total} earned"
+  },
+  "avatar": {
+    "title": "Avatar Studio",
+    "lede": "Customize your blocky character. It's used in the game and on leaderboards.",
+    "skin": "Skin",
+    "hair": "Hair",
+    "hairStyle": "Hair style",
+    "shirt": "Shirt",
+    "pants": "Pants",
+    "shoes": "Shoes",
+    "hat": "Hat",
+    "accessory": "Accessory",
+    "face": "Face",
+    "none": "None",
+    "save": "Save avatar",
+    "saved": "Avatar saved",
+    "lockedItem": "Locked: earn it through an achievement",
+    "rotate": "Drag to rotate",
+    "styles": { "short": "Short", "long": "Long", "cap": "Capped", "bun": "Bun", "buzz": "Buzz" },
+    "faces": { "smile": "Smile", "grin": "Grin", "calm": "Calm", "determined": "Determined" },
+    "hats": {
+      "cap_red": "Red cap",
+      "cap_blue": "Blue cap",
+      "helmet_yellow": "Rescue helmet",
+      "salakot": "Salakot",
+      "grad_cap": "Graduation cap"
+    },
+    "accessories": {
+      "backpack_blue": "Blue backpack",
+      "backpack_orange": "Orange go-bag",
+      "vest_reflective": "Reflective vest",
+      "apron": "Apron",
+      "badge_flame": "Streak badge",
+      "headlamp": "Headlamp"
+    }
+  }
+}
