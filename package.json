@@ -36,6 +36,7 @@
     "pg": "^8.23.0",
     "prettier": "^3.9.9",
     "prettier-plugin-tailwindcss": "^0.8.1",
+    "sharp": "^0.35.5",
     "supabase": "^2.118.0",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",

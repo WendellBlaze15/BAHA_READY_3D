@@ -26,6 +26,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { PRIMARY_TABS, isActive, sectionsFor, type NavSection } from './nav-config';
 import { SettingsApplier } from './settings-applier';
 import { OfflineSync } from '@/lib/offline/offline-sync';
+import { PushAndUpdates } from '@/lib/push/push-client';
 import { UserMenu } from './user-menu';
 
 export function ShellClient({
@@ -60,6 +61,7 @@ export function ShellClient({
   return (
     <RealtimeProvider userId={claims.sub} groupIds={groupIds}>
       <OfflineSync />
+      <PushAndUpdates />
       <SettingsApplier />
       {immersive ? (
         children

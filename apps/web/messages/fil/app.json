@@ -190,5 +190,15 @@
     "terms3": "Maging magalang. Ang mga username na nakakasakit o nagpapanggap na opisyal ay puwedeng palitan o i-suspend.",
     "terms4": "Libre ang Baha Ready 3D. Walang bayad, walang ads, at walang in-app purchases.",
     "updated": "Huling na-update: Setyembre 2026"
+  },
+  "pwa": {
+    "updateAvailable": "May bagong update ang Baha Ready.",
+    "reload": "I-reload",
+    "installTitle": "I-install ang Baha Ready",
+    "downloadLevels": "I-download ang lahat ng level para offline",
+    "downloading": "Dina-download…",
+    "downloaded": "Handa na ang mga level para offline",
+    "pushUnsupported": "Hindi suportado ng browser na ito ang push notifications.",
+    "pushDenied": "Naka-block ang notifications sa browser. Payagan ito sa site settings."
   }
 }

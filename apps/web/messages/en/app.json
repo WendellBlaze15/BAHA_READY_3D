@@ -190,5 +190,15 @@
     "terms3": "Be respectful. Offensive usernames or ones that impersonate officials may be changed or suspended.",
     "terms4": "Baha Ready 3D is free. No payments, no ads, and no in-app purchases.",
     "updated": "Last updated: September 2026"
+  },
+  "pwa": {
+    "updateAvailable": "A new version of Baha Ready is available.",
+    "reload": "Reload",
+    "installTitle": "Install Baha Ready",
+    "downloadLevels": "Download all levels for offline play",
+    "downloading": "Downloading…",
+    "downloaded": "Levels are ready for offline play",
+    "pushUnsupported": "This browser doesn’t support push notifications.",
+    "pushDenied": "Notifications are blocked in this browser. Allow them in site settings."
   }
 }

@@ -41,3 +41,6 @@ apps/web/ios/App/Pods/
 Thumbs.db
 *.log
 .idea/
+apps/web/public/sw.js
+apps/web/public/sw.js.map
+apps/web/public/swe-worker-*.js

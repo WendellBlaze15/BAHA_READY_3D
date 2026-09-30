@@ -8,6 +8,7 @@ import { Check, Download, Loader2, ShieldCheck, TriangleAlert } from 'lucide-rea
 import { toast } from 'sonner';
 import { Link, usePathname, useRouter } from '@/i18n/navigation';
 import { apiPost } from '@/lib/api/client';
+import { enablePush } from '@/lib/push/push-client';
 import { getSupabaseBrowser } from '@/lib/supabase/client';
 import { qk } from '@/lib/query-keys';
 import {
@@ -81,6 +82,7 @@ function useAutoSave() {
 
 export function SettingsPage() {
   const t = useTranslations('settingsPage');
+  const tp = useTranslations('pwa');
   const tc = useTranslations('common');
   const { data: settings } = useSettings();
   const { data: profile } = useProfile();
@@ -157,6 +159,7 @@ export function SettingsPage() {
             </Label>
           ))}
         </RadioGroup>
+        <OfflineDownload />
       </Section>
 
       <Section title={t('audioTitle')}>
@@ -211,7 +214,16 @@ export function SettingsPage() {
         <ToggleRow
           label={t('notifPush')}
           checked={notif.push}
-          onChange={(v) => set('notifications', { ...notif, push: v }, true)}
+          onChange={async (v) => {
+            if (v) {
+              const res = await enablePush().catch(() => 'unsupported' as const);
+              if (res !== 'enabled') {
+                toast.error(tp(res === 'denied' ? 'pushDenied' : 'pushUnsupported'));
+                return;
+              }
+            }
+            set('notifications', { ...notif, push: v }, true);
+          }}
         />
         <ToggleRow
           label={t('notifDaily')}
@@ -644,5 +656,48 @@ function SetPasswordDialog({
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+const LEVEL_SLUGS = ['tutorial', 'signal-1', 'signal-2', 'signal-3', 'signal-4', 'signal-5'];
+
+/** Warms the service-worker caches: the 3D engine chunk + every level page. */
+function OfflineDownload() {
+  const tp = useTranslations('pwa');
+  const locale = useLocale();
+  const [state, setState] = useState<'idle' | 'busy' | 'done'>('idle');
+  return (
+    <Button
+      variant="outline"
+      className="min-h-11"
+      disabled={state === 'busy'}
+      onClick={async () => {
+        setState('busy');
+        try {
+          await import('@/game/scenes/GameCanvas');
+          const prefix = locale === 'en' ? '/en' : '';
+          await Promise.all(
+            LEVEL_SLUGS.map((s) =>
+              fetch(`${prefix}/play/${s}`, { credentials: 'same-origin' }).catch(() => null),
+            ),
+          );
+          setState('done');
+          toast.success(tp('downloaded'));
+        } catch {
+          setState('idle');
+        }
+      }}
+    >
+      {state === 'busy' ? (
+        <Loader2 className="animate-spin" aria-hidden />
+      ) : (
+        <Download aria-hidden />
+      )}
+      {state === 'busy'
+        ? tp('downloading')
+        : state === 'done'
+          ? tp('downloaded')
+          : tp('downloadLevels')}
+    </Button>
   );
 }
