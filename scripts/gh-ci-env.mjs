@@ -19,9 +19,11 @@ const VARIABLES = [
 ];
 const SECRETS = ['UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN', 'SUPABASE_DB_PASSWORD'];
 
+// --dependabot: Dependabot PRs read from a separate secret store.
+const app = process.argv.includes('--dependabot') ? 'dependabot' : null;
 let failed = 0;
 for (const [kind, keys] of [
-  ['variable', VARIABLES],
+  ['variable', app ? [] : VARIABLES],
   ['secret', SECRETS],
 ]) {
   for (const key of keys) {
@@ -32,7 +34,9 @@ for (const [kind, keys] of [
       continue;
     }
     const args =
-      kind === 'variable' ? ['variable', 'set', key, '--body', value] : ['secret', 'set', key];
+      kind === 'variable'
+        ? ['variable', 'set', key, '--body', value]
+        : ['secret', 'set', key, ...(app ? ['--app', app] : [])];
     const r = spawnSync('gh', args, {
       input: kind === 'secret' ? value : undefined,
       stdio: ['pipe', 'ignore', 'pipe'],
