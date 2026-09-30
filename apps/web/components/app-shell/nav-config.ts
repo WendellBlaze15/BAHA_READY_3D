@@ -49,7 +49,7 @@ const PLAYER_MORE: NavItem[] = [
   { href: '/hotlines', labelKey: 'nav.hotlines', icon: Siren },
   { href: '/notifications', labelKey: 'nav.notifications', icon: Bell },
   { href: '/settings', labelKey: 'nav.settings', icon: Settings },
-  { href: '/live', labelKey: 'nav.facLive', icon: Radio },
+  { href: '/live', labelKey: 'nav.joinLive', icon: Radio },
 ];
 
 const APPLY: NavItem = { href: '/apply', labelKey: 'nav.apply', icon: UserPlus };

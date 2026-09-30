@@ -49,7 +49,7 @@
     "facDashboard": "Dashboard",
     "facGroups": "Mga Group ko",
     "facAssignments": "Mga Assignment",
-    "facLive": "Live Session",
+    "facLive": "Mag-host ng live session",
     "facAnalytics": "Analytics",
     "facReports": "Mga Report",
     "adminDashboard": "Admin Dashboard",
@@ -64,7 +64,8 @@
     "superAdmins": "Mga Admin",
     "superSystem": "System Settings",
     "superSecurity": "Security Center",
-    "apply": "Mag-apply bilang Facilitator"
+    "apply": "Mag-apply bilang Facilitator",
+    "joinLive": "Sumali sa live session"
   },
   "landing": {
     "eyebrow": "Pila, Laguna · Paghahanda sa baha",

@@ -49,7 +49,7 @@
     "facDashboard": "Dashboard",
     "facGroups": "My groups",
     "facAssignments": "Assignments",
-    "facLive": "Live session",
+    "facLive": "Host live session",
     "facAnalytics": "Analytics",
     "facReports": "Reports",
     "adminDashboard": "Admin dashboard",
@@ -64,7 +64,8 @@
     "superAdmins": "Admins",
     "superSystem": "System settings",
     "superSecurity": "Security center",
-    "apply": "Apply as facilitator"
+    "apply": "Apply as facilitator",
+    "joinLive": "Join live session"
   },
   "landing": {
     "eyebrow": "Pila, Laguna · Flood preparedness",

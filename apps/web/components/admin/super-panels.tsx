@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { QueryError } from '@/components/query-error';
 import { UsersAdmin } from './users-admin';
 
 /** Admin management: the users table + promote/demote with step-up re-auth. */
@@ -66,7 +67,7 @@ type Setting = { key: string; value: unknown };
 export function SystemSettings() {
   const t = useTranslations('super');
   const qc = useQueryClient();
-  const { data, isPending } = useQuery({
+  const { data, isPending, error, refetch, isFetching } = useQuery({
     queryKey: qk.admin.settings(),
     queryFn: async () => {
       const { data, error } = await getSupabaseBrowser()
@@ -103,6 +104,8 @@ export function SystemSettings() {
     void qc.invalidateQueries({ queryKey: qk.admin.settings() });
   };
 
+  if (error)
+    return <QueryError error={error} retrying={isFetching} onRetry={() => void refetch()} />;
   if (isPending || !data) return <SkeletonCard className="h-96" />;
   return (
     <div className="space-y-5">
@@ -219,7 +222,7 @@ type Sec = {
 
 export function SecurityCenter() {
   const t = useTranslations('super');
-  const { data, isPending } = useQuery({
+  const { data, isPending, error, refetch, isFetching } = useQuery({
     queryKey: qk.admin.security(),
     queryFn: async () => {
       const { data, error } = await getSupabaseBrowser().rpc('security_overview');
@@ -228,6 +231,8 @@ export function SecurityCenter() {
     },
     refetchInterval: 60_000,
   });
+  if (error)
+    return <QueryError error={error} retrying={isFetching} onRetry={() => void refetch()} />;
   if (isPending || !data)
     return (
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">

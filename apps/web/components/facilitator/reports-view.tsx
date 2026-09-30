@@ -11,6 +11,7 @@ import { qk } from '@/lib/query-keys';
 import { useMyOwnedGroups } from '@/lib/data/facilitator';
 import { useApiErrorText } from '@/components/auth/use-api-error';
 import { Button } from '@/components/ui/button';
+import { NoGroups } from './no-groups';
 import {
   Select,
   SelectContent,
@@ -60,6 +61,7 @@ export function ReportsView() {
   return (
     <div className="space-y-5">
       <h1 className="text-4xl font-bold">{t('reportsTitle')}</h1>
+      {groups.isSuccess && !groups.data?.length && <NoGroups />}
       <div className="bg-card flex flex-wrap items-center gap-3 rounded-lg border p-4">
         <Select value={gid} onValueChange={setGroup}>
           <SelectTrigger className="h-11 w-56" aria-label={t('chooseGroup')}>

@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { NoGroups } from './no-groups';
 import { cn } from '@/lib/utils';
 
 type Session = { id: string; code: string; status: string; level_id: number; group_id: string };
@@ -70,6 +71,7 @@ export function LiveSessionPanel({
           <h1 className="text-4xl font-bold">{t('liveTitle')}</h1>
           <p className="text-muted-foreground">{t('liveLede')}</p>
         </div>
+        {groups.isSuccess && !groups.data?.length && <NoGroups />}
         <div className="bg-card flex flex-wrap items-end gap-3 rounded-2xl border p-5">
           <Select value={gid} onValueChange={setGroup}>
             <SelectTrigger className="h-12 w-56" aria-label={t('chooseGroup')}>

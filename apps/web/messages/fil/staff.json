@@ -143,7 +143,9 @@
     "ready": "Handa na ang report",
     "download": "I-download",
     "noReports": "Wala pang report.",
-    "mfaNeeded": "Kailangan ng authenticator app para sa facilitator tools."
+    "mfaNeeded": "Kailangan ng authenticator app para sa facilitator tools.",
+    "noGroupsTitle": "Wala ka pang group",
+    "noGroupsBody": "Gumawa ng group at ibahagi ang join code sa mga estudyante mo. Dito lalabas ang mga resulta nila."
   },
   "admin": {
     "dashboardTitle": "Admin Dashboard",

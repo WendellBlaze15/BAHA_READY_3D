@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
+import { QueryError } from '@/components/query-error';
 import { Textarea } from '@/components/ui/textarea';
 
 type LevelRow = {
@@ -45,7 +46,7 @@ export function LevelsAdmin() {
   const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const { data, isPending } = useQuery({
+  const { data, isPending, error, refetch, isFetching } = useQuery({
     queryKey: qk.admin.levels(),
     queryFn: async () => {
       const sb = getSupabaseBrowser();
@@ -153,6 +154,8 @@ export function LevelsAdmin() {
       </div>
     );
 
+  if (error)
+    return <QueryError error={error} retrying={isFetching} onRetry={() => void refetch()} />;
   if (isPending || !data) return <SkeletonCard className="h-96" />;
   return (
     <div className="space-y-5">

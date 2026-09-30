@@ -39,10 +39,11 @@ describe('i18n catalogs', () => {
 
   it('have no empty strings', () => {
     for (const l of ['fil', 'en'] as const) {
-      const empty = flatten(load(l)).filter((k) => {
+      const catalog = load(l); // parse once — re-loading per key made this test O(keys × files)
+      const empty = flatten(catalog).filter((k) => {
         const v = k
           .split('.')
-          .reduce<unknown>((o, p) => (o as Record<string, unknown>)?.[p], load(l));
+          .reduce<unknown>((o, p) => (o as Record<string, unknown>)?.[p], catalog);
         return v === '';
       });
       expect(empty).toEqual([]);

@@ -7,3 +7,9 @@ onlyBuiltDependencies:
   - sharp
   - unrs-resolver
   - supabase
+
+# Security: lift vulnerable transitive versions (Dependabot alerts). Same APIs.
+overrides:
+  'postcss@<8.5.23': '^8.5.28'
+  'browserslist@<4.28.7': '^4.29.2'
+  'uuid@<11.1.1': '^11.1.1'

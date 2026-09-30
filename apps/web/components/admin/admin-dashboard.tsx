@@ -17,6 +17,7 @@ import { Activity, AlertTriangle, Flag, Mail, UserPlus, Users } from 'lucide-rea
 import { Link } from '@/i18n/navigation';
 import { getSupabaseBrowser } from '@/lib/supabase/client';
 import { qk } from '@/lib/query-keys';
+import { QueryError } from '@/components/query-error';
 import { SkeletonChart, SkeletonStat } from '@/components/skeletons';
 
 type Kpis = {
@@ -43,7 +44,7 @@ export function AdminDashboard({
 }) {
   const t = useTranslations('admin');
   const locale = useLocale();
-  const { data, isPending } = useQuery({
+  const { data, isPending, error, refetch, isFetching } = useQuery({
     queryKey: qk.admin.kpis(),
     queryFn: async () => {
       const { data, error } = await getSupabaseBrowser().rpc('admin_kpis');
@@ -123,7 +124,9 @@ export function AdminDashboard({
             })}
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
-        {isPending || !data ? (
+        {error ? (
+          <QueryError error={error} retrying={isFetching} onRetry={() => void refetch()} />
+        ) : isPending || !data ? (
           <>
             <SkeletonChart />
             <SkeletonChart />

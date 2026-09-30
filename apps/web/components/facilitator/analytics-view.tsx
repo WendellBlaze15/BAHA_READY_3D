@@ -18,6 +18,8 @@ import { getSupabaseBrowser } from '@/lib/supabase/client';
 import { qk } from '@/lib/query-keys';
 import { useMyOwnedGroups } from '@/lib/data/facilitator';
 import { SkeletonChart } from '@/components/skeletons';
+import { QueryError } from '@/components/query-error';
+import { NoGroups } from './no-groups';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -137,7 +139,15 @@ export function AnalyticsView({
         </div>
       </div>
 
-      {q.isPending || !a ? (
+      {groups.isSuccess && !groups.data?.length ? (
+        <NoGroups />
+      ) : groups.isError || q.isError ? (
+        <QueryError
+          error={groups.error ?? q.error}
+          retrying={q.isFetching || groups.isFetching}
+          onRetry={() => void (groups.isError ? groups.refetch() : q.refetch())}
+        />
+      ) : !a ? (
         <div className="grid gap-4 lg:grid-cols-2">
           {[0, 1, 2, 3].map((i) => (
             <SkeletonChart key={i} />
@@ -166,14 +176,25 @@ export function AnalyticsView({
               />
             </BarChart>
           </Chart>
-          <Chart title={t('missedItems')}>
+          <Chart
+            title={t('missedItems')}
+            // Grow with the number of items so long labels never overlap.
+            height={Math.max(240, a.missed_items.length * 36 + 40)}
+          >
             <BarChart
               layout="vertical"
               data={a.missed_items.map((d) => ({ name: L(d.key), count: d.count }))}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis type="number" allowDecimals={false} tick={AXIS} />
-              <YAxis type="category" dataKey="name" width={130} tick={AXIS} />
+              <YAxis
+                type="category"
+                dataKey="name"
+                width={150}
+                interval={0}
+                tick={AXIS}
+                tickFormatter={(v: string) => (v.length > 22 ? `${v.slice(0, 21)}…` : v)}
+              />
               <Tooltip />
               <Bar
                 dataKey="count"
@@ -232,11 +253,19 @@ export function AnalyticsView({
   );
 }
 
-function Chart({ title, children }: { title: string; children: React.ReactElement }) {
+function Chart({
+  title,
+  height = 240,
+  children,
+}: {
+  title: string;
+  height?: number;
+  children: React.ReactElement;
+}) {
   return (
     <section className="bg-card rounded-lg border p-4">
       <h2 className="mb-3 text-lg font-bold">{title}</h2>
-      <div className="h-60">
+      <div style={{ height }}>
         <ResponsiveContainer width="100%" height="100%">
           {children}
         </ResponsiveContainer>

@@ -143,7 +143,9 @@
     "ready": "Report ready",
     "download": "Download",
     "noReports": "No reports yet.",
-    "mfaNeeded": "An authenticator app is required for facilitator tools."
+    "mfaNeeded": "An authenticator app is required for facilitator tools.",
+    "noGroupsTitle": "You don't have a group yet",
+    "noGroupsBody": "Create a group and share its join code with your students. Their results will show up here."
   },
   "admin": {
     "dashboardTitle": "Admin Dashboard",
