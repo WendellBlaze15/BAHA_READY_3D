@@ -56,3 +56,39 @@ if (fs.existsSync(res)) {
     fs.writeFileSync(bg, fs.readFileSync(bg, 'utf8').replace(/#[0-9A-Fa-f]{6}/, '#1E2A38'));
   console.log('✔ android mipmaps');
 }
+
+// Browser-tab favicon (Next file conventions in app/): SVG for modern browsers, multi-size
+// ICO for legacy/Windows, apple-icon for iOS. Tighter padding so the mark reads at 16px.
+const appDir = 'apps/web/app';
+fs.writeFileSync(`${appDir}/icon.svg`, mark(1, false));
+const icoSizes = [16, 32, 48];
+const pngs = await Promise.all(
+  icoSizes.map((s) =>
+    sharp(Buffer.from(mark(s <= 16 ? 0 : 1, false)))
+      .resize(s, s)
+      .png()
+      .toBuffer(),
+  ),
+);
+const header = Buffer.alloc(6);
+header.writeUInt16LE(0, 0);
+header.writeUInt16LE(1, 2); // type: icon
+header.writeUInt16LE(pngs.length, 4);
+let offset = 6 + 16 * pngs.length;
+const entries = pngs.map((png, i) => {
+  const e = Buffer.alloc(16);
+  e.writeUInt8(icoSizes[i] % 256, 0);
+  e.writeUInt8(icoSizes[i] % 256, 1);
+  e.writeUInt16LE(1, 4); // color planes
+  e.writeUInt16LE(32, 6); // bits per pixel
+  e.writeUInt32LE(png.length, 8);
+  e.writeUInt32LE(offset, 12);
+  offset += png.length;
+  return e;
+});
+fs.writeFileSync(`${appDir}/favicon.ico`, Buffer.concat([header, ...entries, ...pngs]));
+await sharp(Buffer.from(mark(3, true)))
+  .resize(180, 180)
+  .png()
+  .toFile(`${appDir}/apple-icon.png`);
+console.log('✔ favicon.ico, icon.svg, apple-icon.png');

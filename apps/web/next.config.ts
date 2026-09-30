@@ -23,6 +23,9 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // Metadata is cheap (local translations): always render it in <head> for every UA, so
+  // link previews and SEO tools that aren't on Next's bot list still see it.
+  htmlLimitedBots: /.*/,
   transpilePackages: ['@baha/shared'],
   images: { formats: ['image/avif', 'image/webp'] },
   experimental: {
