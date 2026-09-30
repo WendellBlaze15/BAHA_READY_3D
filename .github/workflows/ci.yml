@@ -1,0 +1,122 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Public (non-secret) values live in Actions *variables*; nothing here is sensitive.
+  NEXT_PUBLIC_APP_URL: http://localhost:3000
+  NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+  NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ vars.NEXT_PUBLIC_VAPID_PUBLIC_KEY }}
+  SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+
+jobs:
+  checks:
+    name: Lint, types, unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - name: Edge Functions use the current shared game code
+        run: node scripts/sync-functions-shared.mjs --check
+
+  secrets:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  database:
+    name: pgTAP (RLS + functions)
+    # Needs repo secrets, which fork PRs don't get.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Run pgTAP suite (always rolled back)
+        run: pnpm test:db
+        env:
+          SUPABASE_DB_URL: ${{ vars.SUPABASE_DB_URL }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+  e2e:
+    name: Build, bundle budget, E2E + a11y
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+      UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+      BREVO_SENDER_EMAIL: ci@example.com
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Throwaway values for keys the E2E suite never exercises
+        # DECISION: least privilege — the service-role key, Brevo key and signing secrets
+        # never enter CI. Public pages, guards and guest play don't use them.
+        run: |
+          r() { node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"; }
+          {
+            echo "SUPABASE_SERVICE_ROLE_KEY=ci-unused-$(r)"
+            echo "BREVO_API_KEY=xkeysib-ci-unused"
+            echo "ATTEMPT_TOKEN_SECRET=$(r)"
+            echo "EMAIL_WEBHOOK_SECRET=$(r)"
+            echo "CRON_SECRET=$(r)"
+          } >> "$GITHUB_ENV"
+      - name: Build
+        run: pnpm build | tee build.log
+      - name: Bundle budget (shared first-load JS ≤ 180 kB)
+        run: |
+          kb=$(grep -oE 'First Load JS shared by all +[0-9.]+ kB' build.log | grep -oE '[0-9.]+' | tail -1)
+          echo "Shared first-load JS: ${kb} kB"
+          node -e "process.exit(Number('$kb') <= 180 ? 0 : 1)" || { echo "::error::Shared JS ${kb} kB exceeds the 180 kB budget"; exit 1; }
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Playwright (desktop + phone, axe WCAG 2.1 AA)
+        run: pnpm test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report
+            test-results
+          retention-days: 7

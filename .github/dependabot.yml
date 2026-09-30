@@ -1,0 +1,36 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Asia/Manila
+    open-pull-requests-limit: 5
+    groups:
+      # One PR per family keeps review manageable.
+      next-react:
+        patterns: ['next', 'react', 'react-dom', '@next/*', 'eslint-config-next']
+      supabase:
+        patterns: ['@supabase/*', 'supabase']
+      three:
+        patterns: ['three', '@react-three/*', '@dimforge/*', '@types/three']
+      capacitor:
+        patterns: ['@capacitor/*']
+      dev-tooling:
+        dependency-type: development
+        update-types: [minor, patch]
+    ignore:
+      # Majors of the core framework are upgraded deliberately, not by bot.
+      - dependency-name: next
+        update-types: ['version-update:semver-major']
+      - dependency-name: react
+        update-types: ['version-update:semver-major']
+      - dependency-name: react-dom
+        update-types: ['version-update:semver-major']
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
