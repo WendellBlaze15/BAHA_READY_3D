@@ -128,7 +128,14 @@
     "level_locked": "This level is still locked. Finish the previous one first.",
     "daily_mismatch": "The daily challenge changed. Refresh the page.",
     "attempt_closed": "This game has already ended.",
-    "attempt_token_invalid": "The game session expired. Start again."
+    "attempt_token_invalid": "The game session expired. Start again.",
+    "file_too_large": "That file is too large (5 MB max).",
+    "file_type": "Only PDF, JPG, or PNG files are accepted.",
+    "application_pending": "You already have an application under review.",
+    "already_reviewed": "This application was already reviewed.",
+    "note_required": "Add a reason.",
+    "mfa_required": "An authenticator app (MFA) is required for this.",
+    "group_full": "This group is full."
   },
   "offline": {
     "title": "You're offline",

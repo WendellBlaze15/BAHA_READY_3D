@@ -9,7 +9,7 @@ import type { AvatarConfig } from '@/lib/avatar/presets';
 
 type Params = {
   params: Promise<{ locale: string; slug: string }>;
-  searchParams: Promise<{ mode?: string }>;
+  searchParams: Promise<{ mode?: string; session?: string }>;
 };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
@@ -22,7 +22,9 @@ const GUEST_LEVELS = new Set(['tutorial', 'signal-1']);
 
 export default async function PlayPage({ params, searchParams }: Params) {
   const { locale, slug } = await params;
-  const { mode } = await searchParams;
+  const { mode, session } = await searchParams;
+  const liveSessionId =
+    mode === 'live' && session && /^[0-9a-f-]{36}$/.test(session) ? session : undefined;
   setRequestLocale(locale);
   const bundle = await loadLevelBundle(slug, locale === 'en' ? 'en' : 'fil');
   if (!bundle) notFound();
@@ -35,10 +37,11 @@ export default async function PlayPage({ params, searchParams }: Params) {
 
   let avatar: Partial<AvatarConfig> | null = null;
   let bestScore: number | null = null;
+  let username: string | null = null;
   let settings = null;
   if (uid) {
     const [{ data: profile }, { data: prog }, { data: s }] = await Promise.all([
-      supabase.from('profiles').select('avatar_config').eq('id', uid).maybeSingle(),
+      supabase.from('profiles').select('avatar_config, username').eq('id', uid).maybeSingle(),
       supabase
         .from('player_level_progress')
         .select('best_score, unlocked')
@@ -52,6 +55,7 @@ export default async function PlayPage({ params, searchParams }: Params) {
         .maybeSingle(),
     ]);
     avatar = (profile?.avatar_config as Partial<AvatarConfig>) ?? null;
+    username = (profile?.username as string) ?? null;
     bestScore = prog?.best_score ?? null;
     settings = s;
     if (bundle.level.id > 1 && !prog?.unlocked) redirect({ href: '/levels?locked=1', locale });
@@ -69,7 +73,9 @@ export default async function PlayPage({ params, searchParams }: Params) {
       nextHref={bundle.nextSlug ? `/play/${bundle.nextSlug}` : null}
       tips={bundle.tips}
       settings={settings as never}
-      mode={mode === 'daily' ? 'daily' : 'normal'}
+      mode={liveSessionId ? 'live' : mode === 'daily' ? 'daily' : 'normal'}
+      liveSessionId={liveSessionId}
+      me={uid ? { id: uid, username: username ?? '' } : undefined}
     />
   );
 }

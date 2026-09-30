@@ -128,7 +128,14 @@
     "level_locked": "Naka-lock pa ang level na ito. Tapusin muna ang nauna.",
     "daily_mismatch": "Nagbago na ang daily challenge. I-refresh ang pahina.",
     "attempt_closed": "Tapos na ang larong ito.",
-    "attempt_token_invalid": "Nag-expire ang session ng laro. Magsimula ulit."
+    "attempt_token_invalid": "Nag-expire ang session ng laro. Magsimula ulit.",
+    "file_too_large": "Masyadong malaki ang file (hanggang 5 MB lang).",
+    "file_type": "PDF, JPG, o PNG lang ang tinatanggap.",
+    "application_pending": "May aplikasyon ka pang sinusuri.",
+    "already_reviewed": "Nasuri na ang aplikasyong ito.",
+    "note_required": "Maglagay ng dahilan.",
+    "mfa_required": "Kailangan ng authenticator app (MFA) para dito.",
+    "group_full": "Puno na ang group."
   },
   "offline": {
     "title": "Offline ka ngayon",

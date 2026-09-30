@@ -111,6 +111,8 @@ export type Database = {
           id: string
           level_ids: number[]
           min_stars: number
+          reminded_due_soon: boolean
+          reminded_overdue: boolean
           starts_at: string
           title: string
         }
@@ -122,6 +124,8 @@ export type Database = {
           id?: string
           level_ids: number[]
           min_stars?: number
+          reminded_due_soon?: boolean
+          reminded_overdue?: boolean
           starts_at?: string
           title: string
         }
@@ -133,6 +137,8 @@ export type Database = {
           id?: string
           level_ids?: number[]
           min_stars?: number
+          reminded_due_soon?: boolean
+          reminded_overdue?: boolean
           starts_at?: string
           title?: string
         }
@@ -1588,14 +1594,51 @@ export type Database = {
     }
     Functions: {
       abandon_stale_attempts: { Args: never; Returns: number }
+      assignment_progress: {
+        Args: { p_assignment_id: string }
+        Returns: {
+          best_stars: number
+          done: boolean
+          user_id: string
+          username: string
+        }[]
+      }
       authorize: { Args: { requested_permission: string }; Returns: boolean }
       can_access_live_session: { Args: { sid: string }; Returns: boolean }
+      can_view_group: { Args: { gid: string }; Returns: boolean }
       current_request_ip: { Args: never; Returns: unknown }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      enqueue_email: {
+        Args: {
+          p_critical?: boolean
+          p_params?: Json
+          p_template: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
+      facilitator_overview: { Args: { p_group_id?: string }; Returns: Json }
+      finalize_attempt: {
+        Args: { p_attempt_id: string; p_result: Json }
+        Returns: Json
+      }
       generate_code6: { Args: never; Returns: string }
       generate_daily_challenge: {
         Args: { p_date?: string }
         Returns: undefined
+      }
+      get_group_roster: {
+        Args: { p_group_id: string }
+        Returns: {
+          avatar_config: Json
+          joined_at: string
+          last_played: string
+          levels_done: number
+          stars: number
+          status: string
+          user_id: string
+          username: string
+        }[]
       }
       get_leaderboard: {
         Args: {
@@ -1627,6 +1670,15 @@ export type Database = {
           id: string
           username: string
         }[]
+      }
+      group_analytics: {
+        Args: {
+          p_from?: string
+          p_group_id: string
+          p_level_id?: number
+          p_to?: string
+        }
+        Returns: Json
       }
       has_role: { Args: { role_name: string }; Returns: boolean }
       is_active_user: { Args: never; Returns: boolean }
@@ -1660,6 +1712,7 @@ export type Database = {
       realtime_topic_id: { Args: { prefix: string }; Returns: string }
       refresh_leaderboards: { Args: never; Returns: undefined }
       regenerate_join_code: { Args: { gid: string }; Returns: string }
+      remind_assignments: { Args: never; Returns: undefined }
     }
     Enums: {
       [_ in never]: never

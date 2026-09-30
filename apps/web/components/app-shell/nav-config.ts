@@ -49,7 +49,10 @@ const PLAYER_MORE: NavItem[] = [
   { href: '/hotlines', labelKey: 'nav.hotlines', icon: Siren },
   { href: '/notifications', labelKey: 'nav.notifications', icon: Bell },
   { href: '/settings', labelKey: 'nav.settings', icon: Settings },
+  { href: '/live', labelKey: 'nav.facLive', icon: Radio },
 ];
+
+const APPLY: NavItem = { href: '/apply', labelKey: 'nav.apply', icon: UserPlus };
 
 const FACILITATOR: NavItem[] = [
   { href: '/facilitator', labelKey: 'nav.facDashboard', icon: LayoutDashboard, exact: true },
@@ -80,9 +83,9 @@ const SUPER: NavItem[] = [
 
 export function sectionsFor(claims: AppClaims): NavSection[] {
   const can = (p: Permission) => hasPermission(claims, p);
-  const sections: NavSection[] = [
-    { titleKey: 'nav.sectionPlay', items: [...PRIMARY_TABS, ...PLAYER_MORE] },
-  ];
+  const play = [...PRIMARY_TABS, ...PLAYER_MORE];
+  if (!can('groups.manage') && claims.user_role === 'player') play.push(APPLY);
+  const sections: NavSection[] = [{ titleKey: 'nav.sectionPlay', items: play }];
   if (can('groups.manage'))
     sections.push({ titleKey: 'nav.sectionFacilitator', items: FACILITATOR });
   if (can('content.manage')) sections.push({ titleKey: 'nav.sectionAdmin', items: ADMIN });

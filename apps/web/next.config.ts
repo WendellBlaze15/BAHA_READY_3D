@@ -32,7 +32,7 @@ const nextConfig: NextConfig = {
       { source: '/:path*', headers: securityHeaders },
       {
         // The QR scanner is the only route allowed to use the camera.
-        source: '/:locale(en)?/groups/scan',
+        source: '/:locale(en)?/groups',
         headers: [{ key: 'Permissions-Policy', value: 'camera=(self)' }],
       },
     ];

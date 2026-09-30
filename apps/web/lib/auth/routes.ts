@@ -17,6 +17,7 @@ const PLAYER_PREFIXES = [
   '/profile',
   '/settings',
   '/notifications',
+  '/live',
   '/achievements',
   '/avatar',
   '/apply',

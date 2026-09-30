@@ -38,16 +38,18 @@ export function LeaderboardView({
   levels,
   groups,
   hasBarangay,
+  initialScope = 'global',
 }: {
   levels: { id: number; name_fil: string; name_en: string }[];
   groups: { id: string; name: string }[];
   hasBarangay: boolean;
+  initialScope?: Scope;
 }) {
   const t = useTranslations('leaderboard');
   const locale = useLocale();
   const reduce = useReducedMotion();
   const { connected } = useRealtimeStatus();
-  const [scope, setScope] = useState<Scope>('global');
+  const [scope, setScope] = useState<Scope>(initialScope);
   const [period, setPeriod] = useState<Period>('weekly');
   const [level, setLevel] = useState<number>(
     levels.find((l) => l.id === 1)?.id ?? levels[0]?.id ?? 1,

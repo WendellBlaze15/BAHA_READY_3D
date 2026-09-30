@@ -29,6 +29,7 @@ import type { Msg } from './systems/logic';
 import { Hud } from './hud/Hud';
 import { Briefing, Countdown, LoadingScreen, PauseMenu, RotatePrompt } from './hud/Overlays';
 import { Results, type ResultsState } from './hud/Results';
+import { LiveReporter } from './hud/LiveReporter';
 
 // The 3D chunk (three + R3F + Rapier WASM) loads lazily and never blocks other routes.
 const GameCanvas = dynamic(() => import('./scenes/GameCanvas'), { ssr: false });
@@ -47,6 +48,8 @@ export function GameRoot({
   tips,
   settings,
   mode = 'normal',
+  liveSessionId,
+  me,
 }: {
   level: GameLevel;
   config: LevelConfig;
@@ -62,7 +65,9 @@ export function GameRoot({
     audio?: { master?: number; sfx?: number };
     controls?: { joystickSize?: 'sm' | 'md' | 'lg' };
   } | null;
-  mode?: 'normal' | 'daily';
+  mode?: 'normal' | 'daily' | 'live';
+  liveSessionId?: string;
+  me?: { id: string; username: string };
 }) {
   const t = useTranslations('game');
   const locale = useLocale();
@@ -102,18 +107,16 @@ export function GameRoot({
   // Prepare an initial (unseeded) world so the 3D chunk + physics warm up behind the briefing.
   useEffect(() => {
     const layout = generateLayout(baseConfig, 1);
-    useGame
-      .getState()
-      .init({
-        levelSlug: level.slug,
-        config: baseConfig,
-        content,
-        layout,
-        seed: '1',
-        guest,
-        quality,
-        texts,
-      });
+    useGame.getState().init({
+      levelSlug: level.slug,
+      config: baseConfig,
+      content,
+      layout,
+      seed: '1',
+      guest,
+      quality,
+      texts,
+    });
     setLoadStage(1);
     const id = window.setTimeout(() => setLoadStage(3), 900);
     return () => window.clearTimeout(id);
@@ -152,7 +155,11 @@ export function GameRoot({
       let seed = String(Math.floor(Math.random() * 2 ** 31));
       let cfg = baseConfig;
       if (!guest) {
-        const res = await startAttempt({ level_id: level.id, mode });
+        const res = await startAttempt({
+          level_id: level.id,
+          mode,
+          ...(liveSessionId ? { live_session_id: liveSessionId } : {}),
+        });
         attempt.current = res;
         seed = res.seed;
         cfg = res.config;
@@ -234,6 +241,9 @@ export function GameRoot({
   return (
     <div className="bg-storm-slate fixed inset-0 overflow-hidden" style={{ height: '100dvh' }}>
       <GameCanvas avatar={avatar} msg={msg} />
+      {liveSessionId && me && (
+        <LiveReporter sessionId={liveSessionId} me={me} stars={results?.result.stars} />
+      )}
       {loadStage < 3 && <LoadingScreen stage={loadStage} tips={tips} />}
       {phase === 'briefing' && !counting && loadStage >= 3 && (
         <Briefing
