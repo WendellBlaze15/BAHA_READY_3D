@@ -103,6 +103,7 @@ export function EvacScene({ avatar, msg }: { avatar: Partial<AvatarConfig> | nul
 
   const onGroundTap = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
+    if (e.delta > 8) return; // camera-orbit drag, not a tap
     // Tap-to-walk only for short distances; long trips use the joystick/keys.
     const d = Math.hypot(e.point.x - live.player.x, e.point.z - live.player.z);
     if (d < 25) useGame.getState().setMoveTarget({ x: e.point.x, z: e.point.z });

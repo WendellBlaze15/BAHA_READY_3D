@@ -16,6 +16,7 @@ import {
   Radio,
   Users,
   Waves,
+  Wind,
   Zap,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -78,16 +79,25 @@ function Timer() {
   );
 }
 
+const STRIPES =
+  'repeating-linear-gradient(135deg, rgba(255,255,255,.55) 0 6px, rgba(255,255,255,.25) 6px 12px)';
+
 function Bar({
   label,
   value,
   color,
   icon,
+  striped = false,
+  highlight = false,
 }: {
   label: string;
   value: number;
   color: string;
   icon: React.ReactNode;
+  /** Locked state (e.g. Hingal): grey diagonal stripes. */
+  striped?: boolean;
+  /** Brief flash, e.g. when sprint becomes available again. */
+  highlight?: boolean;
 }) {
   return (
     <div
@@ -99,10 +109,19 @@ function Bar({
       aria-valuenow={value}
     >
       <span className="text-white">{icon}</span>
-      <div className="h-2.5 w-28 overflow-hidden rounded-full bg-black/40 sm:w-36">
+      <div
+        className={cn(
+          'h-2.5 w-28 overflow-hidden rounded-full bg-black/40 transition-shadow sm:w-36',
+          highlight && 'ring-evac-green ring-2',
+        )}
+      >
         <div
           className={cn('h-full origin-left rounded-full', color)}
-          style={{ transform: `scaleX(${value / 100})`, transition: 'transform 200ms' }}
+          style={{
+            transform: `scaleX(${value / 100})`,
+            transition: 'transform 200ms',
+            ...(striped ? { backgroundImage: STRIPES } : {}),
+          }}
         />
       </div>
     </div>
@@ -116,6 +135,17 @@ function Vitals({ evac }: { evac: boolean }) {
   const sprint = useGame((s) => s.sprintUi);
   const depth = useGame((s) => s.depthUi);
   const followers = useGame((s) => s.followers.length);
+  // Flash briefly when the Hingal lockout ends so players know sprint is available again.
+  const [ready, setReady] = useState(false);
+  const prev = useRef(sprint);
+  useEffect(() => {
+    const wasLocked = prev.current === 'exhausted';
+    prev.current = sprint;
+    if (!wasLocked || sprint === 'exhausted') return;
+    setReady(true);
+    const id = window.setTimeout(() => setReady(false), 900);
+    return () => window.clearTimeout(id);
+  }, [sprint]);
   return (
     <div className="bg-storm-slate/85 space-y-1.5 rounded-lg px-3 py-2 shadow-lg">
       {evac && (
@@ -132,19 +162,29 @@ function Vitals({ evac }: { evac: boolean }) {
           value={stamina}
           color={
             sprint === 'exhausted'
-              ? 'bg-white/40'
+              ? 'bg-slate-400'
               : sprint === 'sprinting'
-                ? 'bg-signal-amber animate-pulse'
+                ? 'bg-signal-amber motion-safe:animate-pulse'
                 : 'bg-signal-amber'
           }
+          striped={sprint === 'exhausted'}
+          highlight={ready}
           icon={<Zap className="size-4" aria-hidden />}
         />
         {sprint === 'exhausted' && (
           <span
             role="status"
-            className="bg-signal-red/90 rounded px-1.5 py-0.5 text-[11px] font-bold text-white"
+            className="flex items-center gap-1 rounded bg-slate-600/95 px-1.5 py-0.5 text-[11px] font-bold text-white"
           >
-            {t('exhausted')}
+            <Wind className="size-3" aria-hidden /> {t('exhausted')}
+          </span>
+        )}
+        {ready && (
+          <span
+            role="status"
+            className="bg-evac-green/95 flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-bold text-white motion-safe:animate-pulse"
+          >
+            <Footprints className="size-3" aria-hidden /> {t('sprintReady')}
           </span>
         )}
       </div>

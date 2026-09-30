@@ -116,6 +116,7 @@
       "shareText": "Nakakuha ako ng {stars}★ ({score} puntos) sa {level} ng Baha Ready 3D! Handa ka na ba?"
     },
     "exhausted": "Hingal",
+    "sprintReady": "Takbo OK",
     "sprint": "Takbo",
     "jump": "Talon",
     "controlsTip": "Shift = takbo (nauubos ang lakas) · Space = talon · E = gamitin"

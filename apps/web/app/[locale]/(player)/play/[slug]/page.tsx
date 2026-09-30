@@ -51,7 +51,7 @@ export default async function PlayPage({ params, searchParams }: Params) {
         .maybeSingle(),
       supabase
         .from('user_settings')
-        .select('graphics_quality, audio, controls')
+        .select('graphics_quality, audio, controls, reduced_motion')
         .eq('user_id', uid)
         .maybeSingle(),
     ]);

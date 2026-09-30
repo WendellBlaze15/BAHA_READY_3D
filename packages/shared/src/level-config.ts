@@ -14,11 +14,21 @@ export const levelMapSchema = z.enum([
   'town',
 ]);
 
-/** Movement actions (jump, energy-limited sprint). Defaults keep older level versions valid. */
+/**
+ * Movement actions (jump, energy-limited sprint). Defaults keep older level versions valid.
+ * DECISION (owner): exhaustion never slows walking — the only effect of an empty stamina bar is
+ * that sprint and jump are locked until stamina refills to sprintResumeStamina.
+ */
 export const DEFAULT_ACTIONS = {
+  /** Normal walking speed on dry ground (m/s). Never reduced by low stamina. */
+  walkSpeed: 4.6,
   sprintMultiplier: 1.6,
   sprintDrainPerSec: 12,
-  staminaRegenPerSec: 5,
+  /** Seconds after sprinting/jumping before stamina starts refilling. */
+  staminaRegenDelaySec: 0.5,
+  /** Refill rate while walking / while standing still (stamina points per second). */
+  staminaRegenWalkPerSec: 20,
+  staminaRegenIdlePerSec: 30,
   /** Sprint can't start below this stamina… */
   sprintMinStartStamina: 10,
   /** …and after running empty ("Hingal"), it stays locked until stamina recovers to this. */
@@ -29,9 +39,22 @@ export const DEFAULT_ACTIONS = {
 
 export const levelActionsSchema = z
   .object({
+    walkSpeed: z.number().min(2).max(8).default(DEFAULT_ACTIONS.walkSpeed),
     sprintMultiplier: z.number().min(1).max(2.5).default(DEFAULT_ACTIONS.sprintMultiplier),
     sprintDrainPerSec: z.number().min(0).max(50).default(DEFAULT_ACTIONS.sprintDrainPerSec),
-    staminaRegenPerSec: z.number().min(0).max(50).default(DEFAULT_ACTIONS.staminaRegenPerSec),
+    staminaRegenDelaySec: z.number().min(0).max(5).default(DEFAULT_ACTIONS.staminaRegenDelaySec),
+    staminaRegenWalkPerSec: z
+      .number()
+      .min(0)
+      .max(100)
+      .default(DEFAULT_ACTIONS.staminaRegenWalkPerSec),
+    staminaRegenIdlePerSec: z
+      .number()
+      .min(0)
+      .max(100)
+      .default(DEFAULT_ACTIONS.staminaRegenIdlePerSec),
+    /** @deprecated v2 configs stored a single regen rate; it is ignored (see the rates above). */
+    staminaRegenPerSec: z.number().min(0).max(50).optional(),
     sprintMinStartStamina: z
       .number()
       .min(0)
@@ -42,6 +65,50 @@ export const levelActionsSchema = z
     jumpStaminaCost: z.number().min(0).max(50).default(DEFAULT_ACTIONS.jumpStaminaCost),
   })
   .strict();
+
+/**
+ * Third-person camera (presentation only — never scored). Angles in radians, distances in m.
+ * Players adjust sensitivity / invert-Y / auto-follow in user_settings.controls.
+ */
+export const DEFAULT_CAMERA = {
+  /** Starting framing indoors (prep, open-top house) and outdoors (evacuation). */
+  indoorDistance: 11,
+  indoorPitch: 0.82,
+  outdoorDistance: 10,
+  outdoorPitch: 0.55,
+  minDistance: 4,
+  maxDistance: 16,
+  /** Pitch limits: never below the horizon, never straight down. */
+  minPitch: 0.12,
+  maxPitch: 1.25,
+  /** Manual orbit pauses auto-follow for this long (and until the player moves). */
+  followDelaySec: 1.5,
+  /** Base auto-follow rate (1/s); scaled by the player's follow-speed preference. */
+  followRate: 3,
+  /** Pull-in distance kept between the camera and a blocking wall. */
+  collisionPadding: 0.3,
+  /** Closest the camera may be pulled in by walls. */
+  collisionMinDistance: 1.2,
+} as const;
+
+export const cameraConfigSchema = z
+  .object({
+    indoorDistance: z.number().min(2).max(30).default(DEFAULT_CAMERA.indoorDistance),
+    indoorPitch: z.number().min(0).max(1.5).default(DEFAULT_CAMERA.indoorPitch),
+    outdoorDistance: z.number().min(2).max(30).default(DEFAULT_CAMERA.outdoorDistance),
+    outdoorPitch: z.number().min(0).max(1.5).default(DEFAULT_CAMERA.outdoorPitch),
+    minDistance: z.number().min(1).max(30).default(DEFAULT_CAMERA.minDistance),
+    maxDistance: z.number().min(2).max(40).default(DEFAULT_CAMERA.maxDistance),
+    minPitch: z.number().min(0).max(1.5).default(DEFAULT_CAMERA.minPitch),
+    maxPitch: z.number().min(0.1).max(1.55).default(DEFAULT_CAMERA.maxPitch),
+    followDelaySec: z.number().min(0).max(10).default(DEFAULT_CAMERA.followDelaySec),
+    followRate: z.number().min(0.1).max(20).default(DEFAULT_CAMERA.followRate),
+    collisionPadding: z.number().min(0).max(2).default(DEFAULT_CAMERA.collisionPadding),
+    collisionMinDistance: z.number().min(0.5).max(10).default(DEFAULT_CAMERA.collisionMinDistance),
+  })
+  .strict();
+
+export type CameraConfig = z.infer<typeof cameraConfigSchema>;
 
 export const levelConfigSchema = z
   .object({
@@ -86,6 +153,7 @@ export const levelConfigSchema = z
       })
       .default({ timeBonusPerSec: 5, nonEssentialPenaltyPerKg: 20, wrongActionPenalty: 50 }),
     actions: levelActionsSchema.default({ ...DEFAULT_ACTIONS }),
+    camera: cameraConfigSchema.default({ ...DEFAULT_CAMERA }),
   })
   .strict();
 

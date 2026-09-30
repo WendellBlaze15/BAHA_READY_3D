@@ -5,6 +5,7 @@ import { subscribeWithSelector } from 'zustand/middleware';
 import type { GameContent, GameEvent, Layout } from '@baha/shared/game';
 import { initialSprintState } from '@baha/shared/game';
 import type { LevelConfig } from '@baha/shared/level-config';
+import { DEFAULT_CAM_PREFS, type CamPrefs } from '../systems/camera';
 
 export type Phase = 'loading' | 'briefing' | 'countdown' | 'prep' | 'evac' | 'ended';
 export type Quality = 'low' | 'medium' | 'high';
@@ -38,6 +39,8 @@ export const live = {
   /** Vertical velocity (m/s) for jumps; 0 on the ground. */
   vy: 0,
   airborne: false,
+  /** Terrain stamina drain (points/s) set by the evacuation logic each frame. */
+  terrainDrain: 0,
   lastPosSampleT: -1,
   lightningFlash: 0,
   interactTarget: null as null | { kind: 'item' | 'task' | 'npc'; key: string; label: string },
@@ -77,6 +80,8 @@ export type GameState = {
   };
   tutorialStep: number;
   moveTarget: { x: number; z: number } | null;
+  /** Player camera preferences (user_settings.controls + reduced motion). */
+  camPrefs: CamPrefs;
 };
 
 type Actions = {
@@ -133,6 +138,7 @@ const initial: GameState = {
   outcome: null,
   tutorialStep: 0,
   moveTarget: null,
+  camPrefs: DEFAULT_CAM_PREFS,
 };
 
 let hintSeq = 0;
@@ -156,13 +162,15 @@ export const useGame = create<GameState & Actions>()(
         sprint: initialSprintState(),
         vy: 0,
         airborne: false,
+        terrainDrain: 0,
         lastPosSampleT: -1,
         lightningFlash: 0,
         interactTarget: null,
       });
       live.player = { x: 0, z: 0, y: 0, yaw: 0 };
       lastHintAt = -Infinity;
-      set({ ...initial, ...p, phase: 'briefing' });
+      // Keep the player's camera preferences across level (re)starts.
+      set({ ...initial, camPrefs: get().camPrefs, ...p, phase: 'briefing' });
     },
 
     setPhase: (phase) => {
@@ -266,7 +274,7 @@ export const useGame = create<GameState & Actions>()(
 
     setTutorialStep: (n) => set({ tutorialStep: n }),
     setMoveTarget: (p) => set({ moveTarget: p }),
-    reset: () => set({ ...initial }),
+    reset: () => set({ ...initial, camPrefs: get().camPrefs }),
   })),
 );
 

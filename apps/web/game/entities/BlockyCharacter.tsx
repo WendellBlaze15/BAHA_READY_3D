@@ -22,6 +22,8 @@ const DEFAULT: AvatarConfig = {
 export type CharacterAction = {
   airborne: boolean;
   sprinting: boolean;
+  /** Out of breath ("Hingal"): slumped, heavier walk cycle — visual only, speed is unchanged. */
+  tired?: boolean;
   /** Tool swing progress 0..1 (0 = idle). */
   swing: number;
 };
@@ -61,11 +63,13 @@ export const BlockyCharacter = forwardRef<
     const a = actionRef?.current;
     const k = Math.min(1, dt * 12);
     blend.current.air += ((a?.airborne ? 1 : 0) - blend.current.air) * k;
-    blend.current.lean += ((a?.sprinting && s > 1 ? 0.18 : 0) - blend.current.lean) * k;
+    const lean = a?.sprinting && s > 1 ? 0.18 : a?.tired ? 0.12 : 0;
+    blend.current.lean += (lean - blend.current.lean) * k;
     const air = blend.current.air;
 
+    // Tired: slower, smaller arm swing so the walk reads heavy; feet keep pace with real speed.
     phase.current += dt * Math.min(14, 2 + s * 2.2);
-    const amp = Math.min(a?.sprinting ? 1.2 : 0.9, s * 0.18) * (1 - air);
+    const amp = Math.min(a?.sprinting ? 1.2 : a?.tired ? 0.55 : 0.9, s * 0.18) * (1 - air);
     const walk = amp * Math.sin(phase.current);
     // Jump pose: arms up and forward, knees tucked.
     const armAir = -2.5 * air;

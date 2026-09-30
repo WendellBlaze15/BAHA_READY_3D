@@ -70,7 +70,7 @@ export function GroupAdmin({ initial, appUrl }: { initial: Group; appUrl: string
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-4xl font-bold">{group.name}</h1>
+          <h1 className="text-3xl font-bold break-words sm:text-4xl">{group.name}</h1>
           {group.description && <p className="text-muted-foreground">{group.description}</p>}
         </div>
         <Button
@@ -211,24 +211,33 @@ function Roster({ groupId }: { groupId: string }) {
           </h2>
           <ul className="divide-y">
             {pending.map((r) => (
-              <li key={r.user_id} className="flex items-center gap-3 py-2">
-                <BlockyAvatar config={r.avatar_config as Partial<AvatarConfig>} size={24} />
-                <span className="flex-1 font-bold">{r.username}</span>
-                <Button
-                  size="sm"
-                  className="bg-evac-green min-h-10 text-white"
-                  onClick={() => act(r, 'active', 'approved')}
-                >
-                  <Check aria-hidden /> {t('approve')}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="min-h-10"
-                  onClick={() => act(r, 'removed', 'rejectedMember')}
-                >
-                  <X aria-hidden /> {t('reject')}
-                </Button>
+              // Wraps on narrow phones: name on its own line, buttons below (never outside the box).
+              <li key={r.user_id} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2">
+                <span className="flex min-w-0 flex-1 basis-40 items-center gap-2">
+                  <span className="shrink-0">
+                    <BlockyAvatar config={r.avatar_config as Partial<AvatarConfig>} size={24} />
+                  </span>
+                  <span className="truncate font-bold" title={r.username}>
+                    {r.username}
+                  </span>
+                </span>
+                <span className="ml-auto flex shrink-0 gap-2">
+                  <Button
+                    size="sm"
+                    className="bg-evac-green min-h-10 text-white"
+                    onClick={() => act(r, 'active', 'approved')}
+                  >
+                    <Check aria-hidden /> {t('approve')}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="min-h-10"
+                    onClick={() => act(r, 'removed', 'rejectedMember')}
+                  >
+                    <X aria-hidden /> {t('reject')}
+                  </Button>
+                </span>
               </li>
             ))}
           </ul>

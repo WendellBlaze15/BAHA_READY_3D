@@ -72,7 +72,10 @@
       "md": "Katamtaman",
       "lg": "Malaki"
     },
-    "invertCamera": "Baliktarin ang camera",
+    "invertCamera": "Baliktarin ang camera (taas/baba)",
+    "cameraAutoFollow": "Sumusunod ang camera sa likod mo",
+    "cameraSensitivity": "Bilis ng pag-ikot ng camera",
+    "cameraFollowSpeed": "Bilis ng pagsunod ng camera",
     "notificationsTitle": "Mga abiso",
     "notifEmail": "Email",
     "notifPush": "Push notifications",

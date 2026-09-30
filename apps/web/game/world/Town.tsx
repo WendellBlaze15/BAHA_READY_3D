@@ -2,6 +2,7 @@
 
 import { memo, useLayoutEffect, useMemo, useRef } from 'react';
 import { CuboidCollider, RigidBody } from '@react-three/rapier';
+import { NOT_CAMERA_BLOCKING } from '../systems/camera-groups';
 import { Color, InstancedMesh, Object3D } from 'three';
 import type { Building, Layout, Prop } from '@baha/shared/game';
 
@@ -238,11 +239,27 @@ export const Town = memo(function Town({ layout, shadows }: { layout: Layout; sh
             position={[b.x, b.h / 2, b.z]}
           />
         ))}
-        {/* world bounds */}
-        <CuboidCollider args={[w / 2 + 2, 3, 0.5]} position={[cx, 3, bounds.minZ - 0.5]} />
-        <CuboidCollider args={[w / 2 + 2, 3, 0.5]} position={[cx, 3, bounds.maxZ + 0.5]} />
-        <CuboidCollider args={[0.5, 3, d / 2 + 2]} position={[bounds.minX - 0.5, 3, cz]} />
-        <CuboidCollider args={[0.5, 3, d / 2 + 2]} position={[bounds.maxX + 0.5, 3, cz]} />
+        {/* world bounds (invisible: block the player, never the camera) */}
+        <CuboidCollider
+          args={[w / 2 + 2, 3, 0.5]}
+          position={[cx, 3, bounds.minZ - 0.5]}
+          collisionGroups={NOT_CAMERA_BLOCKING}
+        />
+        <CuboidCollider
+          args={[w / 2 + 2, 3, 0.5]}
+          position={[cx, 3, bounds.maxZ + 0.5]}
+          collisionGroups={NOT_CAMERA_BLOCKING}
+        />
+        <CuboidCollider
+          args={[0.5, 3, d / 2 + 2]}
+          position={[bounds.minX - 0.5, 3, cz]}
+          collisionGroups={NOT_CAMERA_BLOCKING}
+        />
+        <CuboidCollider
+          args={[0.5, 3, d / 2 + 2]}
+          position={[bounds.maxX + 0.5, 3, cz]}
+          collisionGroups={NOT_CAMERA_BLOCKING}
+        />
       </RigidBody>
     </group>
   );

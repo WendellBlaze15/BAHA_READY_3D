@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { AdaptiveDpr, PerformanceMonitor } from '@react-three/drei';
 import { Physics } from '@react-three/rapier';
@@ -28,6 +28,8 @@ export default function GameCanvas({
   useEffect(() => clearInteractables, [scene]);
 
   const playing = (phase === 'prep' || phase === 'evac') && !paused;
+  // Active pointers for orbit drags and pinch-zoom (ref: never re-renders).
+  const pointers = useRef(new Map<number, { x: number; y: number; look: boolean }>()).current;
   const maxDpr = isMobile() ? 1.5 : 2;
 
   return (
@@ -39,12 +41,38 @@ export default function GameCanvas({
       shadows={quality === 'high'}
       gl={{ antialias: quality !== 'low', powerPreference: 'high-performance' }}
       camera={{ fov: 55, near: 0.1, far: 300, position: [0, 8, 10] }}
-      onPointerMove={(e) => {
-        // Drag with the mouse (or on the right half on touch) to rotate the camera.
-        if (e.buttons === 1 && (e.pointerType === 'mouse' || e.clientX > window.innerWidth / 2)) {
-          inputActions.addLook(e.movementX);
-        }
+      onPointerDown={(e) => {
+        pointers.set(e.pointerId, {
+          x: e.clientX,
+          y: e.clientY,
+          // Mouse drags anywhere orbit; touch orbits from the right half (left = joystick side).
+          look: e.pointerType === 'mouse' || e.clientX > window.innerWidth / 2,
+        });
       }}
+      onPointerMove={(e) => {
+        const p = pointers.get(e.pointerId);
+        if (!p) return;
+        const dx = e.clientX - p.x;
+        const dy = e.clientY - p.y;
+        const touches = [...pointers.values()];
+        if (e.pointerType === 'touch' && touches.length >= 2) {
+          // Two-finger pinch → zoom (fingers apart = zoom in).
+          const [a, b] = touches;
+          const before = Math.hypot(a!.x - b!.x, a!.y - b!.y);
+          p.x = e.clientX;
+          p.y = e.clientY;
+          const after = Math.hypot(a!.x - b!.x, a!.y - b!.y);
+          inputActions.addZoom((before - after) * 4);
+          return;
+        }
+        p.x = e.clientX;
+        p.y = e.clientY;
+        if (p.look && (e.pointerType !== 'mouse' || e.buttons !== 0)) inputActions.addLook(dx, dy);
+      }}
+      onPointerUp={(e) => pointers.delete(e.pointerId)}
+      onPointerCancel={(e) => pointers.delete(e.pointerId)}
+      onPointerLeave={(e) => pointers.delete(e.pointerId)}
+      onWheel={(e) => inputActions.addZoom(e.deltaY)}
     >
       <PerformanceMonitor
         onDecline={() => {

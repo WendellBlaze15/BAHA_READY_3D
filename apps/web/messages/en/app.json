@@ -72,7 +72,10 @@
       "md": "Medium",
       "lg": "Large"
     },
-    "invertCamera": "Invert camera",
+    "invertCamera": "Invert camera up/down",
+    "cameraAutoFollow": "Camera follows behind you",
+    "cameraSensitivity": "Camera sensitivity",
+    "cameraFollowSpeed": "Camera follow speed",
     "notificationsTitle": "Notifications",
     "notifEmail": "Email",
     "notifPush": "Push notifications",

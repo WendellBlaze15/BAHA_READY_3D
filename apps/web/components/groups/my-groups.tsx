@@ -34,7 +34,9 @@ export function MyGroups() {
   if (!data?.length)
     return <p className="text-muted-foreground bg-card rounded-lg border p-6">{t('empty')}</p>;
   return (
-    <ul className="grid gap-3 sm:grid-cols-2">
+    // minmax(0,1fr): grid items must be allowed to shrink below their content, otherwise a long
+    // group name (e.g. "BRGY. PINAGBAYANAN RESCUER") widens the column past the phone screen.
+    <ul className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2">
       {data.map((m) => {
         const g = m.groups as unknown as {
           id: string;
@@ -48,7 +50,9 @@ export function MyGroups() {
               <Users className="size-6" aria-hidden />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate font-bold">{g.name}</span>
+              <span className="line-clamp-2 font-bold break-words" title={g.name}>
+                {g.name}
+              </span>
               {m.status === 'pending' ? (
                 <span className="text-signal-amber flex items-center gap-1 text-sm">
                   <Clock className="size-3.5" aria-hidden /> {t('pendingJoin')}
@@ -58,12 +62,12 @@ export function MyGroups() {
               )}
             </span>
             {m.status === 'active' && (
-              <ChevronRight className="text-muted-foreground size-5" aria-hidden />
+              <ChevronRight className="text-muted-foreground size-5 shrink-0" aria-hidden />
             )}
           </>
         );
         return (
-          <li key={g.id}>
+          <li key={g.id} className="min-w-0">
             {m.status === 'active' ? (
               <Link
                 href={`/groups/${g.id}`}

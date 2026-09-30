@@ -162,7 +162,7 @@ export function LevelsAdmin() {
   // Movement actions (jump + energy-limited sprint); older versions fall back to defaults.
   const acts = draft ? { ...DEFAULT_ACTIONS, ...draft.actions } : null;
   const actNum = (
-    k: Exclude<keyof LevelActions, 'jumpEnabled'>,
+    k: Exclude<keyof LevelActions, 'jumpEnabled' | 'staminaRegenPerSec'>,
     label: string,
     min: number,
     max: number,
@@ -226,7 +226,10 @@ export function LevelsAdmin() {
               <div className="grid gap-5 sm:grid-cols-2">
                 {actNum('sprintMultiplier', 'sprintMultiplier (×)', 1, 2.5, 0.05)}
                 {actNum('sprintDrainPerSec', 'sprintDrainPerSec', 0, 40, 1)}
-                {actNum('staminaRegenPerSec', 'staminaRegenPerSec', 0, 20, 0.5)}
+                {actNum('walkSpeed', 'walkSpeed (m/s)', 2, 6, 0.1)}
+                {actNum('staminaRegenDelaySec', 'staminaRegenDelaySec (s)', 0, 3, 0.1)}
+                {actNum('staminaRegenWalkPerSec', 'staminaRegenWalkPerSec', 0, 60, 1)}
+                {actNum('staminaRegenIdlePerSec', 'staminaRegenIdlePerSec', 0, 60, 1)}
                 {actNum('sprintMinStartStamina', 'sprintMinStartStamina', 0, 50, 1)}
                 {actNum('sprintResumeStamina', 'sprintResumeStamina', 0, 80, 1)}
                 {actNum('jumpStaminaCost', 'jumpStaminaCost', 0, 20, 1)}

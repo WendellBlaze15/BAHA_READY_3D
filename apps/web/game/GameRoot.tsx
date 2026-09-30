@@ -25,6 +25,7 @@ import { useGame, type GameTexts, live } from './store/game-store';
 import { attachKeyboard, inputActions } from './systems/input';
 import { audio } from './systems/audio';
 import { detectQuality } from './systems/quality';
+import { readCamPrefs } from './systems/camera';
 import type { Msg } from './systems/logic';
 import { Hud } from './hud/Hud';
 import { Briefing, Countdown, LoadingScreen, PauseMenu, RotatePrompt } from './hud/Overlays';
@@ -65,7 +66,8 @@ export function GameRoot({
   settings: {
     graphics_quality?: string;
     audio?: { master?: number; sfx?: number };
-    controls?: { joystickSize?: 'sm' | 'md' | 'lg' };
+    controls?: { joystickSize?: 'sm' | 'md' | 'lg' } & Record<string, unknown>;
+    reduced_motion?: boolean;
   } | null;
   mode?: 'normal' | 'daily' | 'live' | 'assignment';
   liveSessionId?: string;
@@ -129,6 +131,14 @@ export function GameRoot({
   }, [baseConfig, content, guest, level.slug, quality, texts]);
 
   useEffect(() => attachKeyboard(), []);
+
+  // Camera preferences (synced via user_settings) + reduced motion (setting or OS preference).
+  useEffect(() => {
+    const osReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    useGame.setState({
+      camPrefs: readCamPrefs(settings?.controls, !!settings?.reduced_motion || osReduced),
+    });
+  }, [settings?.controls, settings?.reduced_motion]);
   useEffect(() => audio.setVolumes({ master: volume }), [volume]);
 
   // Auto-pause when the tab/app goes to the background (Section 9.8).

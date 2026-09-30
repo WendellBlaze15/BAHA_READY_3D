@@ -70,6 +70,8 @@ export type AttemptResult = {
 const TOLERANCE_SEC = 10;
 const SPEED_TOLERANCE = 1.2;
 const POS_JUMP_TOLERANCE_M = 1.5;
+/** Sustained-speed window: jitter is forgiven once per window, not once per sample. */
+const SPEED_WINDOW_SEC = 4;
 const PROXIMITY_M = 5;
 
 /**
@@ -178,11 +180,31 @@ export function computeResult(
   let sprint = initialSprintState();
   let sprintClock = 0;
   let segmentSprintSec = 0;
+  let segmentLockedSec = 0;
+  // Whole-lockout window: while the replay says sprint is locked ("Hingal"), the distance
+  // covered must fit walking speed. The replay's lockout always lies inside the client's real
+  // one (replay stamina is an upper bound), so honest runs can't trip this.
+  let lockDist = 0;
+  let lockTime = 0;
+  const windowSegs: { dt: number; d: number; allowed: number }[] = [];
+  let winDt = 0;
+  let winD = 0;
+  let winAllowed = 0;
+  const closeLockWindow = () => {
+    if (
+      lockTime > 0 &&
+      lockDist > config.maxSpeed * SPEED_TOLERANCE * lockTime + POS_JUMP_TOLERANCE_M
+    )
+      flags.add('SPEED_IMPOSSIBLE');
+    lockDist = 0;
+    lockTime = 0;
+  };
   const advanceTo = (t: number) => {
     if (t <= sprintClock) return;
     const r = stepSprint(sprint, t - sprintClock, actions);
     sprint = r.state;
     segmentSprintSec += r.sprintSeconds;
+    segmentLockedSec += r.lockedSeconds;
     sprintClock = t;
   };
   for (const e of events) {
@@ -206,13 +228,37 @@ export function computeResult(
       const allowed = config.maxSpeed * SPEED_TOLERANCE * (Math.max(0, dt) + bonus);
       if (dt <= 0 && d > POS_JUMP_TOLERANCE_M) flags.add('SPEED_IMPOSSIBLE');
       else if (dt > 0 && d > allowed + POS_JUMP_TOLERANCE_M) flags.add('SPEED_IMPOSSIBLE');
+      if (dt > 0) {
+        windowSegs.push({ dt, d, allowed });
+        winDt += dt;
+        winD += d;
+        winAllowed += allowed;
+        while (windowSegs.length > 1 && winDt - windowSegs[0]!.dt >= SPEED_WINDOW_SEC) {
+          const old = windowSegs.shift()!;
+          winDt -= old.dt;
+          winD -= old.d;
+          winAllowed -= old.allowed;
+        }
+        if (winDt >= SPEED_WINDOW_SEC - 1e-6 && winD > winAllowed + POS_JUMP_TOLERANCE_M)
+          flags.add('SPEED_IMPOSSIBLE');
+      }
+      if (dt > 0) {
+        const locked = Math.min(segmentLockedSec, dt);
+        if (locked > 0) {
+          lockDist += d * (locked / dt);
+          lockTime += locked;
+        }
+        if (!sprint.exhausted) closeLockWindow(); // window ends when the lockout does
+      }
     } else if (dist(cur.p, layout.start) > 8) {
       flags.add('SPEED_IMPOSSIBLE');
     }
     segmentSprintSec = 0;
+    segmentLockedSec = 0;
     positions.push(cur);
     prevPos = cur;
   }
+  closeLockWindow();
   const near = (target: Vec2, t: number, radius: number, window = 1.5) =>
     positions.some((s) => Math.abs(s.t - t) <= window && dist(s.p, target) <= radius);
 

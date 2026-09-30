@@ -84,7 +84,7 @@ export function GroupDetail({
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-4xl font-bold">{group.name}</h1>
+          <h1 className="text-3xl font-bold break-words sm:text-4xl">{group.name}</h1>
           {group.description && <p className="text-muted-foreground">{group.description}</p>}
         </div>
         <Button variant="ghost" className="min-h-11" onClick={leave}>

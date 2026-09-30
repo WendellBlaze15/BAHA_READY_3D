@@ -7,7 +7,8 @@
 const state = {
   keys: new Set<string>(),
   joy: { x: 0, y: 0 },
-  look: { dx: 0 },
+  /** Manual camera orbit (pixels) and zoom (wheel/pinch units), consumed once per frame. */
+  look: { dx: 0, dy: 0, zoom: 0 },
   interactPressed: false,
   pausePressed: false,
   jumpPressed: false,
@@ -38,7 +39,9 @@ export function getInput() {
     const dz = (v: number) => (Math.abs(v) < 0.15 ? 0 : v);
     x += dz(p.axes[0] ?? 0);
     y -= dz(p.axes[1] ?? 0);
+    // Right stick orbits (both axes); scaled to feel like a ~6 px/frame drag at full tilt.
     state.look.dx += dz(p.axes[2] ?? 0) * 6;
+    state.look.dy += dz(p.axes[3] ?? 0) * 4;
     const pressed = (i: number) => !!p.buttons[i]?.pressed && !state.padPrev[i];
     if (pressed(0)) state.jumpPressed = true;
     if (pressed(2)) state.interactPressed = true;
@@ -76,9 +79,11 @@ export function consumeAttack() {
 }
 
 export function consumeLook() {
-  const dx = state.look.dx;
+  const v = { ...state.look };
   state.look.dx = 0;
-  return dx;
+  state.look.dy = 0;
+  state.look.zoom = 0;
+  return v;
 }
 
 export function consumeInteract() {
@@ -98,8 +103,13 @@ export const inputActions = {
     state.joy.x = x;
     state.joy.y = y;
   },
-  addLook: (dx: number) => {
+  addLook: (dx: number, dy = 0) => {
     state.look.dx += dx;
+    state.look.dy += dy;
+  },
+  /** + = zoom out (wheel down / pinch in). */
+  addZoom: (delta: number) => {
+    state.look.zoom += delta;
   },
   interact: () => {
     state.interactPressed = true;

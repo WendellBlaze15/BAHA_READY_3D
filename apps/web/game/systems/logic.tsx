@@ -133,9 +133,11 @@ export function EvacLogic({ msg }: { msg: Msg }) {
       if (Math.random() < dt * 0.3) g.showHint(msg('chestDeep'), 'danger');
     }
     const moving = live.speed > 0.5;
-    if ((band === 'waist' || band === 'chest') && moving) live.stamina -= 4 * dt * wetPenalty;
-    else if (band === 'knee' && moving) live.stamina -= 1.5 * dt * wetPenalty;
-    else live.stamina += 5 * dt;
+    // Terrain drains feed the shared stamina model (entities/Player.tsx). They only affect when
+    // sprint/jump are available — walking speed never depends on stamina.
+    let drain = 0;
+    if ((band === 'waist' || band === 'chest') && moving) drain += 4 * wetPenalty;
+    else if (band === 'knee' && moving) drain += 1.5 * wetPenalty;
 
     // Hazards.
     let currentHere: string | null = null;
@@ -143,7 +145,7 @@ export function EvacLogic({ msg }: { msg: Msg }) {
       const d = Math.hypot(p.x - h.pos.x, p.z - h.pos.z);
       if (h.key === 'strong_current' && d < h.radius) {
         currentHere = h.id;
-        live.stamina -= 8 * dt;
+        drain += 8;
       }
       if (g.hazardsHit.includes(h.id)) continue;
       let triggered = false;
@@ -168,7 +170,7 @@ export function EvacLogic({ msg }: { msg: Msg }) {
     }
     inCurrent.current = currentHere;
 
-    live.stamina = Math.max(0, Math.min(100, live.stamina));
+    live.terrainDrain = drain;
     if (live.health <= 0) {
       live.health = 0;
       g.end('health');

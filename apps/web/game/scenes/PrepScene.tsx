@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { CuboidCollider, RigidBody } from '@react-three/rapier';
+import { NOT_CAMERA_BLOCKING } from '../systems/camera-groups';
 import type { Group, Mesh } from 'three';
 import type { AvatarConfig } from '@/lib/avatar/presets';
 import { Player } from '../entities/Player';
@@ -65,6 +66,7 @@ const CATEGORY_COLOR: Record<string, string> = {
 function makeTap(onNear: () => void, id: string, pos: { x: number; z: number }) {
   return (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
+    if (e.delta > 8) return; // it was a camera-orbit drag, not a tap
     if (distanceTo(id) < 2.4) onNear();
     else useGame.getState().setMoveTarget({ x: pos.x, z: pos.z + 1.2 });
   };
@@ -325,6 +327,7 @@ function TaskStation({ taskKey, msg }: { taskKey: string; msg: Msg }) {
 function Room() {
   const floorTap = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
+    if (e.delta > 8) return; // camera-orbit drag
     useGame.getState().setMoveTarget({ x: e.point.x, z: e.point.z });
   };
   const wall = '#f2e6c9';
@@ -379,7 +382,12 @@ function Room() {
       </mesh>
       <RigidBody type="fixed" colliders={false}>
         <CuboidCollider args={[ROOM.w / 2, 2, 0.2]} position={[0, 2, -ROOM.d / 2]} />
-        <CuboidCollider args={[ROOM.w / 2, 2, 0.2]} position={[0, 2, ROOM.d / 2 + 0.3]} />
+        {/* front wall is cut away for the diorama view: blocks the player, not the camera */}
+        <CuboidCollider
+          args={[ROOM.w / 2, 2, 0.2]}
+          position={[0, 2, ROOM.d / 2 + 0.3]}
+          collisionGroups={NOT_CAMERA_BLOCKING}
+        />
         <CuboidCollider args={[0.2, 2, ROOM.d / 2]} position={[-ROOM.w / 2, 2, 0]} />
         <CuboidCollider args={[0.2, 2, ROOM.d / 2]} position={[ROOM.w / 2, 2, 0]} />
         <CuboidCollider args={[3.3, 0.5, 1.2]} position={[0, 0.5, -0.3]} />

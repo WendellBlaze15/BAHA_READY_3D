@@ -38,7 +38,14 @@ import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 
 type Audio = { master: number; music: number; sfx: number; voice: number };
-type Controls = { joystickSize: 'sm' | 'md' | 'lg'; invertCamera: boolean };
+type Controls = {
+  joystickSize: 'sm' | 'md' | 'lg';
+  /** Inverts vertical camera orbit. */
+  invertCamera: boolean;
+  cameraAutoFollow?: boolean;
+  cameraSensitivity?: number;
+  cameraFollowSpeed?: number;
+};
 type Notif = {
   email: boolean;
   push: boolean;
@@ -197,6 +204,40 @@ export function SettingsPage() {
               </Label>
             ))}
           </RadioGroup>
+        </Row>
+        <ToggleRow
+          label={t('cameraAutoFollow')}
+          checked={controls.cameraAutoFollow !== false}
+          onChange={(v) => set('controls', { ...controls, cameraAutoFollow: v }, true)}
+        />
+        <Row
+          label={t('cameraSensitivity')}
+          hint={`${(controls.cameraSensitivity ?? 1).toFixed(2)}×`}
+        >
+          <Slider
+            className="w-full max-w-xs"
+            min={0.25}
+            max={3}
+            step={0.25}
+            value={[controls.cameraSensitivity ?? 1]}
+            onValueChange={([v]) => set('controls', { ...controls, cameraSensitivity: v ?? 1 })}
+            aria-label={t('cameraSensitivity')}
+          />
+        </Row>
+        <Row
+          label={t('cameraFollowSpeed')}
+          hint={`${(controls.cameraFollowSpeed ?? 1).toFixed(2)}×`}
+        >
+          <Slider
+            className="w-full max-w-xs"
+            min={0.25}
+            max={3}
+            step={0.25}
+            disabled={controls.cameraAutoFollow === false}
+            value={[controls.cameraFollowSpeed ?? 1]}
+            onValueChange={([v]) => set('controls', { ...controls, cameraFollowSpeed: v ?? 1 })}
+            aria-label={t('cameraFollowSpeed')}
+          />
         </Row>
         <ToggleRow
           label={t('invertCamera')}

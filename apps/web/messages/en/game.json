@@ -116,6 +116,7 @@
       "shareText": "I got {stars}★ ({score} points) on {level} in Baha Ready 3D! Are you ready?"
     },
     "exhausted": "Out of breath",
+    "sprintReady": "Run ready",
     "sprint": "Run",
     "jump": "Jump",
     "controlsTip": "Shift = run (uses energy) · Space = jump · E = interact"
