@@ -230,7 +230,8 @@
     "actor": "Actor",
     "target": "Target",
     "when": "When",
-    "filterAction": "Filter by action"
+    "filterAction": "Filter by action",
+    "actionsTitle": "Actions (jump & sprint)"
   },
   "super": {
     "consoleTitle": "Super Admin Console",

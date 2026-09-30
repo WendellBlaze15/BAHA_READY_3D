@@ -65,7 +65,8 @@
     "superSystem": "System settings",
     "superSecurity": "Security center",
     "apply": "Apply as facilitator",
-    "joinLive": "Join live session"
+    "joinLive": "Join live session",
+    "openApp": "Open app"
   },
   "landing": {
     "eyebrow": "Pila, Laguna · Flood preparedness",
@@ -80,7 +81,8 @@
     "feature2Title": "Safe evacuation",
     "feature2Body": "Avoid live wires, open manholes, and strong currents.",
     "feature3Title": "Help your neighbors",
-    "feature3Body": "Guide elderly people, children, and PWDs to the evacuation center."
+    "feature3Body": "Guide elderly people, children, and PWDs to the evacuation center.",
+    "continuePlaying": "Continue playing"
   },
   "weather": {
     "title": "Weather now in Pila",

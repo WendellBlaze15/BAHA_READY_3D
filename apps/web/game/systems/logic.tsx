@@ -53,6 +53,11 @@ function useCommon(msg: Msg) {
         timeUi: live.time,
         healthUi: Math.round(live.health),
         staminaUi: Math.round(live.stamina),
+        sprintUi: live.sprint.exhausted
+          ? 'exhausted'
+          : live.sprint.sprinting
+            ? 'sprinting'
+            : 'ready',
         depthUi: depthBand(live.depth),
       });
     }

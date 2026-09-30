@@ -48,6 +48,11 @@ export const gameEventSchema = z.discriminatedUnion('type', [
     })
     .strict(),
   z.object({ t, type: z.literal('quit'), payload: z.object({}).strict() }).strict(),
+  // Movement actions: the server replays stamina from these to validate sprint speed.
+  z
+    .object({ t, type: z.literal('sprint'), payload: z.object({ on: z.boolean() }).strict() })
+    .strict(),
+  z.object({ t, type: z.literal('jump'), payload: z.object({}).strict() }).strict(),
 ]);
 
 export type GameEvent = z.infer<typeof gameEventSchema>;

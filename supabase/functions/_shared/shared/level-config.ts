@@ -15,6 +15,35 @@ export const levelMapSchema = z.enum([
   'town',
 ]);
 
+/** Movement actions (jump, energy-limited sprint). Defaults keep older level versions valid. */
+export const DEFAULT_ACTIONS = {
+  sprintMultiplier: 1.6,
+  sprintDrainPerSec: 12,
+  staminaRegenPerSec: 5,
+  /** Sprint can't start below this stamina… */
+  sprintMinStartStamina: 10,
+  /** …and after running empty ("Hingal"), it stays locked until stamina recovers to this. */
+  sprintResumeStamina: 25,
+  jumpEnabled: true,
+  jumpStaminaCost: 4,
+} as const;
+
+export const levelActionsSchema = z
+  .object({
+    sprintMultiplier: z.number().min(1).max(2.5).default(DEFAULT_ACTIONS.sprintMultiplier),
+    sprintDrainPerSec: z.number().min(0).max(50).default(DEFAULT_ACTIONS.sprintDrainPerSec),
+    staminaRegenPerSec: z.number().min(0).max(50).default(DEFAULT_ACTIONS.staminaRegenPerSec),
+    sprintMinStartStamina: z
+      .number()
+      .min(0)
+      .max(100)
+      .default(DEFAULT_ACTIONS.sprintMinStartStamina),
+    sprintResumeStamina: z.number().min(0).max(100).default(DEFAULT_ACTIONS.sprintResumeStamina),
+    jumpEnabled: z.boolean().default(DEFAULT_ACTIONS.jumpEnabled),
+    jumpStaminaCost: z.number().min(0).max(50).default(DEFAULT_ACTIONS.jumpStaminaCost),
+  })
+  .strict();
+
 export const levelConfigSchema = z
   .object({
     signal: z.number().int().min(0).max(5),
@@ -57,8 +86,11 @@ export const levelConfigSchema = z
         wrongActionPenalty: z.number().default(50),
       })
       .default({ timeBonusPerSec: 5, nonEssentialPenaltyPerKg: 20, wrongActionPenalty: 50 }),
+    actions: levelActionsSchema.default({ ...DEFAULT_ACTIONS }),
   })
   .strict();
+
+export type LevelActions = z.infer<typeof levelActionsSchema>;
 
 export type LevelConfig = z.infer<typeof levelConfigSchema>;
 export type LevelMap = z.infer<typeof levelMapSchema>;

@@ -16,8 +16,14 @@ export async function requireUser(opts: { permission?: Permission; onboarded?: b
   const { data } = await supabase.auth.getClaims();
   const claims = (data?.claims ?? null) as AppClaims | null;
   if (!claims?.sub) throw fail('UNAUTHENTICATED', 'errors.unauthenticated');
-  if (claims.user_status && claims.user_status !== 'active')
-    throw fail('FORBIDDEN', 'errors.suspended');
+  // Live status, not the (up to 1h old) JWT claim: suspensions apply to APIs immediately.
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('status')
+    .eq('id', claims.sub)
+    .maybeSingle();
+  const status = (profile?.status as string | undefined) ?? claims.user_status;
+  if (status && status !== 'active') throw fail('FORBIDDEN', 'errors.suspended');
   if (opts.onboarded && !claims.onboarded) throw fail('FORBIDDEN', 'errors.onboarding_required');
   if (opts.permission && !hasPermission(claims, opts.permission))
     throw fail('FORBIDDEN', 'errors.forbidden');

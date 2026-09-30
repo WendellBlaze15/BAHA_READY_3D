@@ -10,7 +10,15 @@ const state = {
   look: { dx: 0 },
   interactPressed: false,
   pausePressed: false,
+  jumpPressed: false,
+  attackPressed: false,
+  /** On-screen Sprint button held. */
+  sprintTouch: false,
+  /** Previous gamepad button states (edge detection). */
+  padPrev: [] as boolean[],
 };
+
+let padSprint = false;
 
 export function getInput() {
   let x = state.joy.x;
@@ -21,7 +29,8 @@ export function getInput() {
   if (k.has('KeyW') || k.has('ArrowUp')) y += 1;
   if (k.has('KeyS') || k.has('ArrowDown')) y -= 1;
 
-  // Gamepad (standard mapping): left stick move, right stick look, A interact, Start pause.
+  // Gamepad (standard mapping): left stick move, right stick look, A jump, X interact,
+  // B attack, LT / L3 sprint, Start pause. Buttons are edge-triggered (one action per press).
   const pads =
     typeof navigator !== 'undefined' && navigator.getGamepads ? navigator.getGamepads() : [];
   for (const p of pads) {
@@ -30,8 +39,13 @@ export function getInput() {
     x += dz(p.axes[0] ?? 0);
     y -= dz(p.axes[1] ?? 0);
     state.look.dx += dz(p.axes[2] ?? 0) * 6;
-    if (p.buttons[0]?.pressed) state.interactPressed = true;
-    if (p.buttons[9]?.pressed) state.pausePressed = true;
+    const pressed = (i: number) => !!p.buttons[i]?.pressed && !state.padPrev[i];
+    if (pressed(0)) state.jumpPressed = true;
+    if (pressed(2)) state.interactPressed = true;
+    if (pressed(1)) state.attackPressed = true;
+    if (pressed(9)) state.pausePressed = true;
+    state.padPrev = p.buttons.map((b) => b.pressed);
+    padSprint = !!(p.buttons[6]?.pressed || p.buttons[10]?.pressed);
     break;
   }
   const len = Math.hypot(x, y);
@@ -40,6 +54,25 @@ export function getInput() {
     y /= len;
   }
   return { x, y };
+}
+
+/** Sprint is held (Shift, on-screen button, or gamepad LT/L3). */
+export function isSprintHeld() {
+  return (
+    state.keys.has('ShiftLeft') || state.keys.has('ShiftRight') || state.sprintTouch || padSprint
+  );
+}
+
+export function consumeJump() {
+  const v = state.jumpPressed;
+  state.jumpPressed = false;
+  return v;
+}
+
+export function consumeAttack() {
+  const v = state.attackPressed;
+  state.attackPressed = false;
+  return v;
 }
 
 export function consumeLook() {
@@ -74,6 +107,15 @@ export const inputActions = {
   pause: () => {
     state.pausePressed = true;
   },
+  jump: () => {
+    state.jumpPressed = true;
+  },
+  attack: () => {
+    state.attackPressed = true;
+  },
+  setSprint: (held: boolean) => {
+    state.sprintTouch = held;
+  },
 };
 
 /** Attach keyboard listeners; returns cleanup. */
@@ -96,12 +138,18 @@ export function attachKeyboard() {
     ) {
       e.preventDefault();
     }
+    const repeat = e.repeat || state.keys.has(e.code);
     state.keys.add(e.code);
     if (e.code === 'KeyE' || e.code === 'Enter') state.interactPressed = true;
+    if (e.code === 'Space' && !repeat) state.jumpPressed = true;
+    if (e.code === 'KeyF' && !repeat) state.attackPressed = true;
     if (e.code === 'Escape' || e.code === 'KeyP') state.pausePressed = true;
   };
   const up = (e: KeyboardEvent) => state.keys.delete(e.code);
-  const blur = () => state.keys.clear();
+  const blur = () => {
+    state.keys.clear();
+    state.sprintTouch = false;
+  };
   window.addEventListener('keydown', down);
   window.addEventListener('keyup', up);
   window.addEventListener('blur', blur);
@@ -111,5 +159,8 @@ export function attachKeyboard() {
     window.removeEventListener('blur', blur);
     state.keys.clear();
     state.joy = { x: 0, y: 0 };
+    state.sprintTouch = false;
+    state.jumpPressed = false;
+    state.attackPressed = false;
   };
 }

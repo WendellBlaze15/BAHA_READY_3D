@@ -74,6 +74,11 @@ export function decide(
   if (claims.user_status && claims.user_status !== 'active' && path !== '/suspended') {
     return { action: 'redirect', to: '/suspended', reason: 'suspended' };
   }
+  // One-time screens: once done, send the user on instead of letting them redo them.
+  if (matches(path, '/onboarding') && claims.onboarded)
+    return { action: 'redirect', to: '/home', reason: 'already-onboarded' };
+  if (matches(path, '/suspended') && (!claims.user_status || claims.user_status === 'active'))
+    return { action: 'redirect', to: '/home', reason: 'not-suspended' };
   if (rule.kind === 'auth') return { action: 'allow' };
 
   if (!claims.onboarded)

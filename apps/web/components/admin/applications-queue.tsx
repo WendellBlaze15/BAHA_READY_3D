@@ -2,13 +2,14 @@
 
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useFormatter, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { Check, FileText, Loader2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { getSupabaseBrowser } from '@/lib/supabase/client';
 import { qk } from '@/lib/query-keys';
 import { SkeletonCard } from '@/components/skeletons';
 import { Button } from '@/components/ui/button';
+import { useRelativeTime } from '@/lib/i18n/use-relative-time';
 import { Textarea } from '@/components/ui/textarea';
 
 type App = {
@@ -25,7 +26,7 @@ type App = {
 /** Oldest-first queue; approvals go through the approve-facilitator Edge Function. */
 export function ApplicationsQueue() {
   const t = useTranslations('admin');
-  const format = useFormatter();
+  const relTime = useRelativeTime();
   const qc = useQueryClient();
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
@@ -91,7 +92,7 @@ export function ApplicationsQueue() {
                   <p className="text-muted-foreground text-sm">{a.contact}</p>
                 </div>
                 <span className="text-muted-foreground text-xs">
-                  {t('submitted')} {format.relativeTime(new Date(a.created_at))}
+                  {t('submitted')} {relTime(a.created_at)}
                 </span>
               </div>
               <p className="bg-muted rounded-lg p-3 text-sm whitespace-pre-line">{a.reason}</p>

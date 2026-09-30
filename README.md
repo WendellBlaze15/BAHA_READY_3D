@@ -65,6 +65,7 @@ All secrets live in the repo-root `.env.local`. `scripts/with-env.mjs` loads it 
 | `pnpm dev` / `pnpm build` / `pnpm --filter @baha/web start` | Develop / build / serve production locally |
 | `pnpm lint` · `pnpm typecheck` · `pnpm test` | Static checks and unit tests |
 | `pnpm test:db` | pgTAP RLS and function tests against the linked project (always rolled back) |
+| `pnpm test:journeys` | Cross-role integration journeys (157 checks) against a local server: application → approval → groups → assignments → play → analytics/reports, live sessions, moderation, suspension, data isolation. Uses temporary `@test.local` users and cleans up. Local only (needs the service key) |
 | `pnpm test:e2e` | Playwright + axe (reuses a server on :3000; `PW_CHANNEL=msedge` uses installed Edge) |
 | `pnpm db:push` | Apply new migrations |
 | `pnpm db:types` | Regenerate Supabase TypeScript types |

@@ -49,6 +49,7 @@ export function GameRoot({
   settings,
   mode = 'normal',
   liveSessionId,
+  assignmentId,
   me,
   sandbox = false,
 }: {
@@ -66,8 +67,10 @@ export function GameRoot({
     audio?: { master?: number; sfx?: number };
     controls?: { joystickSize?: 'sm' | 'md' | 'lg' };
   } | null;
-  mode?: 'normal' | 'daily' | 'live';
+  mode?: 'normal' | 'daily' | 'live' | 'assignment';
   liveSessionId?: string;
+  /** Assignment being played: lets the server open a not-yet-unlocked assigned level. */
+  assignmentId?: string;
   me?: { id: string; username: string };
   /** Admin test mode: draft config from Level Configuration, nothing is recorded. */
   sandbox?: boolean;
@@ -170,6 +173,7 @@ export function GameRoot({
           level_id: level.id,
           mode,
           ...(liveSessionId ? { live_session_id: liveSessionId } : {}),
+          ...(assignmentId ? { assignment_id: assignmentId } : {}),
         });
         attempt.current = res;
         seed = res.seed;

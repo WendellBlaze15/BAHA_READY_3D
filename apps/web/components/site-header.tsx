@@ -4,9 +4,12 @@ import { Button } from '@/components/ui/button';
 import { BrandMark } from '@/components/brand-mark';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { getClaims } from '@/lib/auth/session';
+import { homeFor } from '@/lib/auth/claims';
 
 export async function SiteHeader() {
   const t = await getTranslations();
+  const claims = await getClaims();
   return (
     <header className="bg-card/95 supports-[backdrop-filter]:bg-card/80 border-b backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-2 px-4 pt-[env(safe-area-inset-top)]">
@@ -31,7 +34,11 @@ export async function SiteHeader() {
           <LanguageSwitcher />
           <ThemeToggle />
           <Button asChild size="sm" className="ml-1 min-h-11">
-            <Link href="/sign-in">{t('nav.signIn')}</Link>
+            {claims ? (
+              <Link href={homeFor(claims)}>{t('nav.openApp')}</Link>
+            ) : (
+              <Link href="/sign-in">{t('nav.signIn')}</Link>
+            )}
           </Button>
         </div>
       </div>

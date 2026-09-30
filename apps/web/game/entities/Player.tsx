@@ -6,11 +6,16 @@ import { CapsuleCollider, RigidBody, useRapier, type RapierRigidBody } from '@re
 import type { RapierCollider as Collider } from '@react-three/rapier';
 import { Vector3, type Group, type SpotLight } from 'three';
 import type { AvatarConfig } from '@/lib/avatar/presets';
-import { BlockyCharacter } from './BlockyCharacter';
-import { consumeLook, getInput } from '../systems/input';
-import { depthSpeed, live, useGame } from '../store/game-store';
+import { setSprintIntent, stepSprint, tryJump, withActions } from '@baha/shared/game';
+import { BlockyCharacter, type CharacterAction } from './BlockyCharacter';
+import { consumeJump, consumeLook, getInput, isSprintHeld } from '../systems/input';
+import { depthBand, depthSpeed, live, useGame } from '../store/game-store';
+import { audio } from '../systems/audio';
 
 const BASE_SPEED = 4.6; // m/s on dry ground (config.maxSpeed caps anti-cheat at 6 × 1.2)
+const GROUND_Y = 0.9;
+const GRAVITY = 20; // m/s² — snappy, game-feel gravity
+const JUMP_VELOCITY = 6.6; // ≈ 1.1 m apex with GRAVITY
 
 export type CameraMode = 'indoor' | 'outdoor';
 
@@ -38,6 +43,7 @@ export function Player({
   const visual = useRef<Group>(null);
   const light = useRef<SpotLight>(null);
   const speedRef = useRef(0);
+  const actionRef = useRef<CharacterAction>({ airborne: false, sprinting: false, swing: 0 });
   const { world } = useRapier();
   const { camera } = useThree();
   const camTarget = useMemo(() => new Vector3(), []);
@@ -99,8 +105,47 @@ export function Player({
       }
     }
 
-    const stamina = live.stamina < 15 ? 0.6 : 1;
-    const speed = BASE_SPEED * depthSpeed(live.depth) * stamina;
+    // ── Sprint (energy-limited) ─────────────────────────────────────
+    const actions = withActions(s.config?.actions);
+    const band = depthBand(live.depth);
+    const deepWater = band === 'waist' || band === 'chest';
+    const moving = Math.hypot(vx, vz) > 0.1;
+    const want = active && moving && !deepWater && isSprintHeld();
+    if (want !== live.sprint.want) {
+      live.sprint = setSprintIntent(live.sprint, want);
+      if (active) useGame.getState().log({ type: 'sprint', payload: { on: want } });
+    }
+    if (active) {
+      // Terrain drains/regeneration during evacuation live in systems/logic.tsx; here we only
+      // drain for sprinting (evac) or run the full model (prep, indoors).
+      const regen = s.phase === 'prep' ? actions.staminaRegenPerSec : 0;
+      const r = stepSprint({ ...live.sprint, stamina: live.stamina }, dt, {
+        ...actions,
+        staminaRegenPerSec: regen,
+      });
+      live.sprint = r.state;
+      live.stamina = r.state.stamina;
+    }
+
+    // ── Jump ────────────────────────────────────────────────────────
+    const p0 = b.translation();
+    const grounded = !live.airborne || p0.y <= GROUND_Y + 1e-3;
+    if (consumeJump() && active && grounded && !deepWater) {
+      const next = tryJump({ ...live.sprint, stamina: live.stamina }, actions);
+      if (next) {
+        live.sprint = next;
+        live.stamina = next.stamina;
+        live.vy = JUMP_VELOCITY;
+        live.airborne = true;
+        controller.disableSnapToGround();
+        useGame.getState().log({ type: 'jump', payload: {} });
+        audio.blip('jump');
+      }
+    }
+
+    const tired = live.sprint.exhausted || live.stamina < 15 ? 0.6 : 1;
+    const sprintMul = live.sprint.sprinting ? actions.sprintMultiplier : 1;
+    const speed = BASE_SPEED * depthSpeed(live.depth) * tired * sprintMul;
     let mx = vx * speed * dt;
     let mz = vz * speed * dt;
     if (active && extraForce) {
@@ -109,11 +154,29 @@ export function Player({
       mz += f.z * dt;
     }
 
-    controller.computeColliderMovement(col, { x: mx, y: -0.02, z: mz });
+    // Vertical: jump arc under gravity; a small constant push keeps us snapped when grounded.
+    let dy = -0.02;
+    if (live.airborne) {
+      live.vy -= GRAVITY * dt;
+      dy = live.vy * dt;
+    }
+    controller.computeColliderMovement(col, { x: mx, y: dy, z: mz });
     const m = controller.computedMovement();
     const p = b.translation();
-    const next = { x: p.x + m.x, y: Math.max(0.9, p.y + m.y), z: p.z + m.z };
+    const next = { x: p.x + m.x, y: Math.max(GROUND_Y, p.y + m.y), z: p.z + m.z };
+    if (
+      live.airborne &&
+      live.vy < 0 &&
+      (next.y <= GROUND_Y + 1e-3 || controller.computedGrounded())
+    ) {
+      live.airborne = false;
+      live.vy = 0;
+      controller.enableSnapToGround(0.3);
+    }
     b.setNextKinematicTranslation(next);
+    live.player.y = next.y - GROUND_Y;
+    actionRef.current.airborne = live.airborne;
+    actionRef.current.sprinting = live.sprint.sprinting;
 
     const moved = Math.hypot(m.x, m.z) / Math.max(dt, 1e-4);
     speedRef.current = speedRef.current + (moved - speedRef.current) * 0.3;
@@ -161,7 +224,7 @@ export function Player({
     >
       <CapsuleCollider ref={collider} args={[0.5, 0.35]} />
       <group ref={visual} position={[0, -0.9, 0]}>
-        <BlockyCharacter config={avatar} speedRef={speedRef} castShadow />
+        <BlockyCharacter config={avatar} speedRef={speedRef} actionRef={actionRef} castShadow />
         {flashlight && (
           <spotLight
             ref={light}

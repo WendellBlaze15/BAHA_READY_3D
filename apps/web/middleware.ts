@@ -37,6 +37,26 @@ async function getFlags() {
   return flagsCache;
 }
 
+// Live account status per user, cached 30s per edge instance. The JWT's user_status can be
+// up to an hour stale; this makes a suspension (or restore) take effect within ~30s.
+const statusCache = new Map<string, { at: number; status: string }>();
+async function liveStatus(
+  supabase: ReturnType<typeof createServerClient>,
+  uid: string,
+): Promise<string | null> {
+  const hit = statusCache.get(uid);
+  if (hit && Date.now() - hit.at < 30_000) return hit.status;
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('status')
+    .eq('id', uid)
+    .maybeSingle();
+  if (error || !data) return null; // fall back to the JWT claim
+  if (statusCache.size > 5000) statusCache.clear();
+  statusCache.set(uid, { at: Date.now(), status: data.status as string });
+  return data.status as string;
+}
+
 function stripLocale(pathname: string) {
   for (const l of routing.locales) {
     if (pathname === `/${l}`) return { locale: l, path: '/' };
@@ -76,7 +96,12 @@ export default async function middleware(incoming: NextRequest) {
 
   // Verifies the JWT (and refreshes the session cookie when needed).
   const { data } = await supabase.auth.getClaims();
-  const claims = (data?.claims ?? null) as AppClaims | null;
+  let claims = (data?.claims ?? null) as AppClaims | null;
+  if (claims?.sub) {
+    const status = await liveStatus(supabase, claims.sub);
+    if (status && status !== claims.user_status)
+      claims = { ...claims, user_status: status as AppClaims['user_status'] };
+  }
 
   const { locale, path } = stripLocale(request.nextUrl.pathname);
   const decision = decide(path, claims, await getFlags());

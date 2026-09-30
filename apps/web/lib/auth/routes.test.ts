@@ -61,6 +61,18 @@ describe('guard decisions', () => {
       to: '/suspended',
     });
   });
+  it('does not let onboarded users redo onboarding', () => {
+    expect(decide('/onboarding', player, opts)).toMatchObject({ to: '/home' });
+    expect(decide('/onboarding', { ...player, onboarded: false }, opts)).toEqual({
+      action: 'allow',
+    });
+  });
+  it('only shows the suspended screen to suspended users', () => {
+    expect(decide('/suspended', player, opts)).toMatchObject({ to: '/home' });
+    expect(decide('/suspended', { ...player, user_status: 'suspended' }, opts)).toEqual({
+      action: 'allow',
+    });
+  });
   it('keeps signed-in users away from sign-in', () => {
     expect(decide('/sign-in', player, opts)).toMatchObject({ to: '/home' });
   });

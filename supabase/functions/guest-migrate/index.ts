@@ -38,6 +38,7 @@ serve(async (req) => {
   const content = await loadContent(admin);
   const imported: { level_id: number; score: number; stars: number }[] = [];
   let discarded = 0;
+  let failed = 0;
 
   for (const g of parsed.data.attempts) {
     const { data: level } = await admin
@@ -45,7 +46,10 @@ serve(async (req) => {
       .select('current_version_id')
       .eq('id', g.level_id)
       .single();
-    if (!level?.current_version_id) continue;
+    if (!level?.current_version_id) {
+      failed++;
+      continue;
+    }
     const config = await loadLevelConfig(admin, level.current_version_id);
     // Dry-run first: never store attempts that fail validation.
     const dry = computeResult(config, content, generateLayout(config, g.seed), g.events);
@@ -53,7 +57,7 @@ serve(async (req) => {
       discarded++;
       continue;
     }
-    const { data: attempt } = await admin
+    const { data: attempt, error: insertError } = await admin
       .from('attempts')
       .insert({
         user_id: userId,
@@ -61,10 +65,15 @@ serve(async (req) => {
         level_version_id: level.current_version_id,
         mode: 'normal',
         seed: Number(g.seed),
+        imported: true, // exempt from the one-live-attempt rule (see migration 000700)
       })
       .select('id')
       .single();
-    if (!attempt) continue;
+    if (!attempt) {
+      console.error('guest-migrate insert failed', insertError?.message);
+      failed++;
+      continue;
+    }
     const { result } = await scoreAndFinalize({
       admin,
       attemptId: attempt.id,
@@ -81,5 +90,5 @@ serve(async (req) => {
     });
     imported.push({ level_id: g.level_id, score: result.score, stars: result.stars });
   }
-  return json(req, { imported, discarded });
+  return json(req, { imported, discarded, failed });
 });

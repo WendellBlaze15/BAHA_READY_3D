@@ -121,7 +121,10 @@ class AudioManager {
     osc.stop(t + seconds);
   }
 
-  blip(kind: 'pack' | 'unpack' | 'task' | 'error' | 'rescue' | 'hit' | 'win' = 'pack') {
+  blip(
+    kind:
+      'pack' | 'unpack' | 'task' | 'error' | 'rescue' | 'hit' | 'win' | 'jump' | 'swing' = 'pack',
+  ) {
     if (!this.ctx) return;
     const ctx = this.ctx;
     const notes: Record<string, number[]> = {
@@ -132,6 +135,8 @@ class AudioManager {
       rescue: [523, 784, 1047],
       hit: [150, 90],
       win: [523, 659, 784, 1047],
+      jump: [392, 587],
+      swing: [300, 200],
     };
     const seq = notes[kind] ?? [660];
     seq.forEach((f, i) => {

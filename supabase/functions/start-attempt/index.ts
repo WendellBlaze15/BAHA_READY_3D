@@ -49,8 +49,11 @@ serve(async (req) => {
   if (!level?.is_active || !level.current_version_id)
     throw new HttpError('NOT_FOUND', 'errors.not_found');
 
-  // Unlock check (tutorial + Signal 1 are always open).
-  if (input.level_id > 1) {
+  // Unlock check (tutorial + Signal 1 are always open). DECISION: a locked level may still be
+  // played when there is a legitimate reason the server can verify — today's daily challenge
+  // (same seed for everyone), an open live session of the player's group, or an assignment
+  // from one of the player's groups that includes this level.
+  if (input.level_id > 1 && !(await unlockedByContext(admin, userId, input))) {
     const { data: prog } = await admin
       .from('player_level_progress')
       .select('unlocked')
@@ -116,3 +119,55 @@ serve(async (req) => {
     expires_at: new Date(exp * 1000).toISOString(),
   });
 });
+
+/** True when the daily/live/assignment context grants access to a not-yet-unlocked level. */
+async function unlockedByContext(
+  admin: ReturnType<typeof adminClient>,
+  userId: string,
+  input: { level_id: number; mode: string; assignment_id?: string; live_session_id?: string },
+) {
+  if (input.mode === 'daily') {
+    const today = new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10); // Asia/Manila
+    const { data } = await admin
+      .from('daily_challenges')
+      .select('level_id')
+      .eq('date', today)
+      .maybeSingle();
+    return data?.level_id === input.level_id;
+  }
+  const isMember = async (groupId: string) => {
+    const { data } = await admin
+      .from('group_members')
+      .select('status')
+      .eq('group_id', groupId)
+      .eq('user_id', userId)
+      .maybeSingle();
+    return data?.status === 'active';
+  };
+  if (input.live_session_id) {
+    const { data } = await admin
+      .from('live_sessions')
+      .select('group_id, level_id, status')
+      .eq('id', input.live_session_id)
+      .maybeSingle();
+    return (
+      !!data &&
+      data.level_id === input.level_id &&
+      data.status !== 'ended' &&
+      (await isMember(data.group_id))
+    );
+  }
+  if (input.assignment_id) {
+    const { data } = await admin
+      .from('assignments')
+      .select('group_id, level_ids')
+      .eq('id', input.assignment_id)
+      .maybeSingle();
+    return (
+      !!data &&
+      (data.level_ids as number[]).includes(input.level_id) &&
+      (await isMember(data.group_id))
+    );
+  }
+  return false;
+}

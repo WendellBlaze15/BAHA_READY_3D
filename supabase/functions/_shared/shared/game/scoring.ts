@@ -3,6 +3,13 @@ import type { LevelConfig } from '../level-config.ts';
 import { DEFAULT_HAZARD_DAMAGE, HAZARD_DAMAGE, indexBy, type GameContent } from './content.ts';
 import type { GameEvent } from './events.ts';
 import { dist, type Layout, type Vec2 } from './layout.ts';
+import {
+  initialSprintState,
+  setSprintIntent,
+  stepSprint,
+  tryJump,
+  withActions,
+} from './stamina.ts';
 
 export type FlagReason =
   | 'EVENT_ORDER_INVALID'
@@ -162,21 +169,47 @@ export function computeResult(
     config.homeTasks.reduce((s, k) => s + (tasks.get(k)?.points ?? 0), 0);
   const prepScore = essentialPts + taskPts;
 
-  // ── Evacuation: positions, hazards, NPCs ──────────────────────────
+  // ── Evacuation: positions (with stamina-replayed sprint), hazards, NPCs ──
+  // Sprint speed is granted only for seconds the replayed stamina could pay for. The replay
+  // ignores terrain drains, so it can only over-estimate real stamina: honest runs never flag.
+  const actions = withActions(config.actions);
   const positions: { t: number; p: Vec2 }[] = [];
   let prevPos: { t: number; p: Vec2 } | null = null;
+  let sprint = initialSprintState();
+  let sprintClock = 0;
+  let segmentSprintSec = 0;
+  const advanceTo = (t: number) => {
+    if (t <= sprintClock) return;
+    const r = stepSprint(sprint, t - sprintClock, actions);
+    sprint = r.state;
+    segmentSprintSec += r.sprintSeconds;
+    sprintClock = t;
+  };
   for (const e of events) {
+    if (e.type === 'sprint') {
+      advanceTo(e.t);
+      sprint = setSprintIntent(sprint, e.payload.on);
+      continue;
+    }
+    if (e.type === 'jump') {
+      advanceTo(e.t);
+      sprint = tryJump(sprint, actions) ?? sprint; // a disallowed jump is just ignored
+      continue;
+    }
     if (e.type !== 'pos') continue;
+    advanceTo(e.t);
     const cur = { t: e.t, p: { x: e.payload.x, z: e.payload.z } };
     if (prevPos) {
       const dt = cur.t - prevPos.t;
       const d = dist(cur.p, prevPos.p);
+      const bonus = (actions.sprintMultiplier - 1) * Math.min(segmentSprintSec, Math.max(0, dt));
+      const allowed = config.maxSpeed * SPEED_TOLERANCE * (Math.max(0, dt) + bonus);
       if (dt <= 0 && d > POS_JUMP_TOLERANCE_M) flags.add('SPEED_IMPOSSIBLE');
-      else if (dt > 0 && d > config.maxSpeed * SPEED_TOLERANCE * dt + POS_JUMP_TOLERANCE_M)
-        flags.add('SPEED_IMPOSSIBLE');
+      else if (dt > 0 && d > allowed + POS_JUMP_TOLERANCE_M) flags.add('SPEED_IMPOSSIBLE');
     } else if (dist(cur.p, layout.start) > 8) {
       flags.add('SPEED_IMPOSSIBLE');
     }
+    segmentSprintSec = 0;
     positions.push(cur);
     prevPos = cur;
   }

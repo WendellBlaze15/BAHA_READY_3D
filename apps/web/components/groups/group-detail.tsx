@@ -9,6 +9,7 @@ import { getSupabaseBrowser } from '@/lib/supabase/client';
 import { qk } from '@/lib/query-keys';
 import { SkeletonCard, SkeletonText } from '@/components/skeletons';
 import { LeaderboardView } from '@/components/leaderboard/leaderboard-view';
+import { useRelativeTime } from '@/lib/i18n/use-relative-time';
 import { Button } from '@/components/ui/button';
 
 type Level = { id: number; slug: string; name_fil: string; name_en: string };
@@ -22,6 +23,7 @@ export function GroupDetail({
 }) {
   const t = useTranslations('groupsPage');
   const format = useFormatter();
+  const relTime = useRelativeTime();
   const locale = useLocale();
   const router = useRouter();
   const sb = getSupabaseBrowser();
@@ -139,7 +141,7 @@ export function GroupDetail({
                       const l = lvl(id);
                       return l ? (
                         <Button key={id} asChild size="sm" variant="outline" className="min-h-10">
-                          <Link href={`/play/${l.slug}`}>
+                          <Link href={`/play/${l.slug}?mode=assignment&assignment=${a.id}`}>
                             <Play className="size-3.5" aria-hidden />{' '}
                             {locale === 'en' ? l.name_en : l.name_fil}
                           </Link>
@@ -174,7 +176,7 @@ export function GroupDetail({
                   </p>
                   <p className="mt-1 text-sm whitespace-pre-line">{n.body}</p>
                   <time className="text-muted-foreground text-xs" dateTime={n.created_at}>
-                    {format.relativeTime(new Date(n.created_at))}
+                    {relTime(n.created_at)}
                   </time>
                 </li>
               ))}

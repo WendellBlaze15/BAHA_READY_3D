@@ -35,6 +35,15 @@ export function hasPermission(claims: AppClaims | null | undefined, permission: 
   return !!claims && claims.user_status === 'active' && !!claims.permissions?.includes(permission);
 }
 
+/** Where "open the app" should take a signed-in user (mirrors post-sign-in routing). */
+export function homeFor(claims: AppClaims) {
+  if (!claims.onboarded) return '/onboarding';
+  if (claims.user_role === 'super_admin') return '/super';
+  if (claims.user_role === 'admin') return '/admin';
+  if (claims.user_role === 'facilitator') return '/facilitator';
+  return '/home';
+}
+
 export function isStaff(claims: AppClaims | null | undefined) {
   return !!claims?.user_role && (STAFF_ROLES as readonly string[]).includes(claims.user_role);
 }

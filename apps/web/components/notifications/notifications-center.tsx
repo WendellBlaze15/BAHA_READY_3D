@@ -1,16 +1,17 @@
 'use client';
 
-import { useFormatter, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { BellOff, CheckCheck } from 'lucide-react';
 import { useRouter } from '@/i18n/navigation';
 import { useMarkNotificationsRead, useNotifications } from '@/lib/data/me';
 import { Skeleton } from '@/components/skeletons';
 import { Button } from '@/components/ui/button';
+import { useRelativeTime } from '@/lib/i18n/use-relative-time';
 import { cn } from '@/lib/utils';
 
 export function NotificationsCenter() {
   const t = useTranslations('notificationsPage');
-  const format = useFormatter();
+  const relTime = useRelativeTime();
   const router = useRouter();
   const { data, isPending } = useNotifications();
   const mark = useMarkNotificationsRead();
@@ -80,7 +81,7 @@ export function NotificationsCenter() {
                       dateTime={n.created_at}
                       className="text-muted-foreground mt-1 block text-xs"
                     >
-                      {format.relativeTime(new Date(n.created_at))}
+                      {relTime(n.created_at)}
                     </time>
                   </span>
                 </button>

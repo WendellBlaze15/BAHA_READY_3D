@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useFormatter, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { Download, FileSpreadsheet, FileText, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiPost } from '@/lib/api/client';
@@ -12,6 +12,7 @@ import { useMyOwnedGroups } from '@/lib/data/facilitator';
 import { useApiErrorText } from '@/components/auth/use-api-error';
 import { Button } from '@/components/ui/button';
 import { NoGroups } from './no-groups';
+import { useRelativeTime } from '@/lib/i18n/use-relative-time';
 import {
   Select,
   SelectContent,
@@ -22,7 +23,7 @@ import {
 
 export function ReportsView() {
   const t = useTranslations('fac');
-  const format = useFormatter();
+  const relTime = useRelativeTime();
   const errText = useApiErrorText();
   const groups = useMyOwnedGroups();
   const [group, setGroup] = useState('');
@@ -107,9 +108,7 @@ export function ReportsView() {
         {jobs.data?.map((j) => (
           <li key={j.id} className="flex flex-wrap items-center gap-3 p-4">
             <span className="font-bold uppercase">{j.type.replace('group_', '')}</span>
-            <span className="text-muted-foreground text-sm">
-              {format.relativeTime(new Date(j.created_at))}
-            </span>
+            <span className="text-muted-foreground text-sm">{relTime(j.created_at)}</span>
             <span className="ml-auto text-sm">
               {j.status === 'ready' ? (
                 <Button asChild size="sm" className="min-h-10">

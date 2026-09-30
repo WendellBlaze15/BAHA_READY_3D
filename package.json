@@ -23,7 +23,8 @@
     "db:advisors": "node scripts/advisors.mjs",
     "functions:sync": "node scripts/sync-functions-shared.mjs",
     "functions:deploy": "node scripts/sync-functions-shared.mjs && node scripts/with-env.mjs supabase functions deploy --use-api",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:journeys": "node scripts/with-env.mjs tsx scripts/journeys.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

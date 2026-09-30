@@ -5,7 +5,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFormatter, useLocale, useTranslations } from 'next-intl';
 import { FlaskConical, Loader2, Rocket } from 'lucide-react';
 import { toast } from 'sonner';
-import { levelConfigSchema, type LevelConfig } from '@baha/shared/level-config';
+import {
+  levelConfigSchema,
+  type LevelConfig,
+  DEFAULT_ACTIONS,
+  type LevelActions,
+} from '@baha/shared/level-config';
 import { getSupabaseBrowser } from '@/lib/supabase/client';
 import { qk } from '@/lib/query-keys';
 import { SkeletonCard } from '@/components/skeletons';
@@ -154,6 +159,33 @@ export function LevelsAdmin() {
       </div>
     );
 
+  // Movement actions (jump + energy-limited sprint); older versions fall back to defaults.
+  const acts = draft ? { ...DEFAULT_ACTIONS, ...draft.actions } : null;
+  const actNum = (
+    k: Exclude<keyof LevelActions, 'jumpEnabled'>,
+    label: string,
+    min: number,
+    max: number,
+    step: number,
+  ) =>
+    draft &&
+    acts && (
+      <div className="space-y-1.5">
+        <Label className="flex justify-between">
+          <span>{label}</span>
+          <span className="tabular-nums">{acts[k]}</span>
+        </Label>
+        <Slider
+          min={min}
+          max={max}
+          step={step}
+          value={[acts[k]]}
+          onValueChange={([v]) => setDraft({ ...draft, actions: { ...acts, [k]: v } })}
+          aria-label={label}
+        />
+      </div>
+    );
+
   if (error)
     return <QueryError error={error} retrying={isFetching} onRetry={() => void refetch()} />;
   if (isPending || !data) return <SkeletonCard className="h-96" />;
@@ -189,6 +221,29 @@ export function LevelsAdmin() {
               {num('currentStrength', 'currentStrength', 0, 1, 0.05)}
               {num('maxSpeed', 'maxSpeed (m/s)', 3, 10, 0.5)}
             </div>
+            <fieldset className="space-y-3 rounded-lg border p-4">
+              <legend className="px-1 text-sm font-bold">{t('actionsTitle')}</legend>
+              <div className="grid gap-5 sm:grid-cols-2">
+                {actNum('sprintMultiplier', 'sprintMultiplier (×)', 1, 2.5, 0.05)}
+                {actNum('sprintDrainPerSec', 'sprintDrainPerSec', 0, 40, 1)}
+                {actNum('staminaRegenPerSec', 'staminaRegenPerSec', 0, 20, 0.5)}
+                {actNum('sprintMinStartStamina', 'sprintMinStartStamina', 0, 50, 1)}
+                {actNum('sprintResumeStamina', 'sprintResumeStamina', 0, 80, 1)}
+                {actNum('jumpStaminaCost', 'jumpStaminaCost', 0, 20, 1)}
+              </div>
+              {acts && (
+                <div className="flex min-h-11 items-center gap-2">
+                  <Switch
+                    id="sw-jump"
+                    checked={acts.jumpEnabled}
+                    onCheckedChange={(v) =>
+                      setDraft({ ...draft!, actions: { ...acts, jumpEnabled: v } })
+                    }
+                  />
+                  <Label htmlFor="sw-jump">jumpEnabled</Label>
+                </div>
+              )}
+            </fieldset>
             <div className="flex flex-wrap gap-6">
               {(['night', 'lightning'] as const).map((k) => (
                 <div key={k} className="flex min-h-11 items-center gap-2">

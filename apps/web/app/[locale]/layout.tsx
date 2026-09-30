@@ -72,7 +72,7 @@ export default async function LocaleLayout({
         <a href="#main" className="skip-link">
           {t('skipToContent')}
         </a>
-        <NextIntlClientProvider>
+        <NextIntlClientProvider now={new Date()} timeZone="Asia/Manila">
           <Providers nonce={nonce}>
             <OfflineBanner />
             {children}

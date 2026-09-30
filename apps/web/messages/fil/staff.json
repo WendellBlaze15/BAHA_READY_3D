@@ -230,7 +230,8 @@
     "actor": "Gumawa",
     "target": "Target",
     "when": "Kailan",
-    "filterAction": "I-filter ang aksyon"
+    "filterAction": "I-filter ang aksyon",
+    "actionsTitle": "Galaw (talon at takbo)"
   },
   "super": {
     "consoleTitle": "Super Admin Console",

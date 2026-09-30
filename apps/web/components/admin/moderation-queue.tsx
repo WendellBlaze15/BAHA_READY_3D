@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useFormatter, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { Ban, ChevronDown, Loader2, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiPost } from '@/lib/api/client';
@@ -11,6 +11,7 @@ import { qk } from '@/lib/query-keys';
 import { useApiErrorText } from '@/components/auth/use-api-error';
 import { SkeletonCard } from '@/components/skeletons';
 import { Button } from '@/components/ui/button';
+import { useRelativeTime } from '@/lib/i18n/use-relative-time';
 import { Input } from '@/components/ui/input';
 
 type Flagged = {
@@ -29,7 +30,7 @@ type Ev = { t: number; type: string; payload: Record<string, unknown> };
 
 export function ModerationQueue() {
   const t = useTranslations('admin');
-  const format = useFormatter();
+  const relTime = useRelativeTime();
   const errText = useApiErrorText();
   const qc = useQueryClient();
   const [open, setOpen] = useState<string | null>(null);
@@ -74,8 +75,7 @@ export function ModerationQueue() {
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-bold">{a.username}</span>
                 <span className="text-muted-foreground text-sm">
-                  L{a.level_id} · {a.score ?? '—'} pts · {a.stars ?? 0}★ ·{' '}
-                  {format.relativeTime(new Date(a.started_at))}
+                  L{a.level_id} · {a.score ?? '—'} pts · {a.stars ?? 0}★ · {relTime(a.started_at)}
                 </span>
                 {a.status === 'voided' && (
                   <span className="bg-signal-red rounded-sm px-2 text-xs font-bold text-white">

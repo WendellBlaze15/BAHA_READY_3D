@@ -5,11 +5,12 @@ import { redirect } from '@/i18n/navigation';
 import { getSupabaseServer } from '@/lib/supabase/server';
 import { loadLevelBundle } from '@/lib/game/load-level';
 import { GameRoot } from '@/game/GameRoot';
+import { parsePlayContext, unlockedByContext } from '@/lib/game/context-unlock';
 import type { AvatarConfig } from '@/lib/avatar/presets';
 
 type Params = {
   params: Promise<{ locale: string; slug: string }>;
-  searchParams: Promise<{ mode?: string; session?: string; sandbox?: string }>;
+  searchParams: Promise<{ mode?: string; session?: string; assignment?: string; sandbox?: string }>;
 };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
@@ -22,9 +23,9 @@ const GUEST_LEVELS = new Set(['tutorial', 'signal-1']);
 
 export default async function PlayPage({ params, searchParams }: Params) {
   const { locale, slug } = await params;
-  const { mode, session, sandbox } = await searchParams;
-  const liveSessionId =
-    mode === 'live' && session && /^[0-9a-f-]{36}$/.test(session) ? session : undefined;
+  const q = await searchParams;
+  const { sandbox } = q;
+  const ctx = parsePlayContext(q);
   setRequestLocale(locale);
   const bundle = await loadLevelBundle(slug, locale === 'en' ? 'en' : 'fil');
   if (!bundle) notFound();
@@ -58,7 +59,12 @@ export default async function PlayPage({ params, searchParams }: Params) {
     username = (profile?.username as string) ?? null;
     bestScore = prog?.best_score ?? null;
     settings = s;
-    if (bundle.level.id > 1 && !prog?.unlocked) redirect({ href: '/levels?locked=1', locale });
+    if (
+      bundle.level.id > 1 &&
+      !prog?.unlocked &&
+      !(await unlockedByContext(supabase, uid, bundle.level.id, ctx))
+    )
+      redirect({ href: '/levels?locked=1', locale });
   }
 
   return (
@@ -73,8 +79,9 @@ export default async function PlayPage({ params, searchParams }: Params) {
       nextHref={bundle.nextSlug ? `/play/${bundle.nextSlug}` : null}
       tips={bundle.tips}
       settings={settings as never}
-      mode={liveSessionId ? 'live' : mode === 'daily' ? 'daily' : 'normal'}
-      liveSessionId={liveSessionId}
+      mode={ctx.mode}
+      liveSessionId={ctx.liveSessionId}
+      assignmentId={ctx.assignmentId}
       sandbox={
         sandbox === '1' &&
         ((claims?.claims as { permissions?: string[] } | undefined)?.permissions ?? []).includes(

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useFormatter, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import QRCode from 'qrcode';
 import {
   Archive,
@@ -27,6 +27,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { useRelativeTime } from '@/lib/i18n/use-relative-time';
 import { Textarea } from '@/components/ui/textarea';
 
 type Group = {
@@ -173,7 +174,7 @@ export function GroupAdmin({ initial, appUrl }: { initial: Group; appUrl: string
 
 function Roster({ groupId }: { groupId: string }) {
   const t = useTranslations('fac');
-  const format = useFormatter();
+  const relTime = useRelativeTime();
   const { data, isPending } = useRoster(groupId);
   const set = useSetMemberStatus(groupId);
   const [q, setQ] = useState('');
@@ -281,7 +282,7 @@ function Roster({ groupId }: { groupId: string }) {
                     <td className="p-3 tabular-nums">{r.levels_done}/5</td>
                     <td className="p-3 tabular-nums">{r.stars}★</td>
                     <td className="text-muted-foreground p-3">
-                      {r.last_played ? format.relativeTime(new Date(r.last_played)) : t('never')}
+                      {r.last_played ? relTime(r.last_played) : t('never')}
                     </td>
                     <td className="p-3 text-right">
                       <Button
@@ -308,7 +309,7 @@ function Roster({ groupId }: { groupId: string }) {
                     <p className="truncate font-bold">{r.username}</p>
                     <p className="text-muted-foreground text-xs">
                       {r.levels_done}/5 · {r.stars}★ ·{' '}
-                      {r.last_played ? format.relativeTime(new Date(r.last_played)) : t('never')}
+                      {r.last_played ? relTime(r.last_played) : t('never')}
                     </p>
                   </div>
                   <Button

@@ -4,11 +4,14 @@ import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
 import { StormSignalMeter } from '@/components/storm-signal-meter/storm-signal-meter';
 import { DioramaPoster } from '@/components/landing/diorama-poster';
+import { getClaims } from '@/lib/auth/session';
+import { homeFor } from '@/lib/auth/claims';
 
 export default async function LandingPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations('landing');
+  const claims = await getClaims();
 
   const features = [
     { icon: Backpack, title: t('feature1Title'), body: t('feature1Body') },
@@ -30,11 +33,17 @@ export default async function LandingPage({ params }: { params: Promise<{ locale
               size="lg"
               className="bg-signal-amber text-storm-slate hover:bg-signal-amber/90 min-h-12 text-base font-bold"
             >
-              <Link href="/play/tutorial">{t('playGuest')}</Link>
+              {claims ? (
+                <Link href={homeFor(claims)}>{t('continuePlaying')}</Link>
+              ) : (
+                <Link href="/play/tutorial">{t('playGuest')}</Link>
+              )}
             </Button>
-            <Button asChild size="lg" variant="outline" className="min-h-12 text-base">
-              <Link href="/sign-up">{t('createAccount')}</Link>
-            </Button>
+            {!claims && (
+              <Button asChild size="lg" variant="outline" className="min-h-12 text-base">
+                <Link href="/sign-up">{t('createAccount')}</Link>
+              </Button>
+            )}
           </div>
         </div>
         <div className="bg-card overflow-hidden rounded-2xl border">

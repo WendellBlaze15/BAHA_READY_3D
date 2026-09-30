@@ -16,6 +16,7 @@ const files = [
   'game/content.ts',
   'game/layout.ts',
   'game/scoring.ts',
+  'game/stamina.ts',
   'game/index.ts',
 ];
 const header =

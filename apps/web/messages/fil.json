@@ -65,7 +65,8 @@
     "superSystem": "System Settings",
     "superSecurity": "Security Center",
     "apply": "Mag-apply bilang Facilitator",
-    "joinLive": "Sumali sa live session"
+    "joinLive": "Sumali sa live session",
+    "openApp": "Buksan ang app"
   },
   "landing": {
     "eyebrow": "Pila, Laguna · Paghahanda sa baha",
@@ -80,7 +81,8 @@
     "feature2Title": "Ligtas na paglikas",
     "feature2Body": "Iwasan ang live wire, bukas na manhole, at malakas na agos.",
     "feature3Title": "Tulungan ang kapitbahay",
-    "feature3Body": "Samahan ang matatanda, bata, at PWD papunta sa evacuation center."
+    "feature3Body": "Samahan ang matatanda, bata, at PWD papunta sa evacuation center.",
+    "continuePlaying": "Ituloy ang paglalaro"
   },
   "weather": {
     "title": "Panahon ngayon sa Pila",

@@ -114,6 +114,10 @@
       "guestUpsell": "Gumawa ng account para i-save ang progress at i-unlock ang Signal No. 2 hanggang No. 5.",
       "share": "I-share",
       "shareText": "Nakakuha ako ng {stars}★ ({score} puntos) sa {level} ng Baha Ready 3D! Handa ka na ba?"
-    }
+    },
+    "exhausted": "Hingal",
+    "sprint": "Takbo",
+    "jump": "Talon",
+    "controlsTip": "Shift = takbo (nauubos ang lakas) · Space = talon · E = gamitin"
   }
 }

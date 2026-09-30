@@ -11,6 +11,8 @@ import {
   Heart,
   Navigation,
   Pause,
+  ArrowUpFromLine,
+  Footprints,
   Radio,
   Users,
   Waves,
@@ -107,39 +109,118 @@ function Bar({
   );
 }
 
-function Vitals() {
+function Vitals({ evac }: { evac: boolean }) {
   const t = useTranslations('game');
   const health = useGame((s) => s.healthUi);
   const stamina = useGame((s) => s.staminaUi);
+  const sprint = useGame((s) => s.sprintUi);
   const depth = useGame((s) => s.depthUi);
   const followers = useGame((s) => s.followers.length);
   return (
     <div className="bg-storm-slate/85 space-y-1.5 rounded-lg px-3 py-2 shadow-lg">
-      <Bar
-        label={t('health')}
-        value={health}
-        color={health < 30 ? 'bg-signal-red' : 'bg-evac-green'}
-        icon={<Heart className="size-4" aria-hidden />}
-      />
-      <Bar
-        label={t('stamina')}
-        value={stamina}
-        color="bg-signal-amber"
-        icon={<Zap className="size-4" aria-hidden />}
-      />
-      <p
-        className={cn(
-          'flex items-center gap-1.5 text-xs font-bold',
-          depth === 'chest' ? 'text-red-300' : 'text-white/90',
+      {evac && (
+        <Bar
+          label={t('health')}
+          value={health}
+          color={health < 30 ? 'bg-signal-red' : 'bg-evac-green'}
+          icon={<Heart className="size-4" aria-hidden />}
+        />
+      )}
+      <div className="flex items-center gap-2">
+        <Bar
+          label={t('stamina')}
+          value={stamina}
+          color={
+            sprint === 'exhausted'
+              ? 'bg-white/40'
+              : sprint === 'sprinting'
+                ? 'bg-signal-amber animate-pulse'
+                : 'bg-signal-amber'
+          }
+          icon={<Zap className="size-4" aria-hidden />}
+        />
+        {sprint === 'exhausted' && (
+          <span
+            role="status"
+            className="bg-signal-red/90 rounded px-1.5 py-0.5 text-[11px] font-bold text-white"
+          >
+            {t('exhausted')}
+          </span>
         )}
-      >
-        <Waves className="size-4" aria-hidden /> {t(`depth.${depth}`)}
-      </p>
-      <p className="flex items-center gap-1.5 text-xs text-white/90">
-        <Users className="size-4" aria-hidden /> {t('followers', { count: followers })}
-      </p>
+      </div>
+      {!evac ? null : (
+        <>
+          <p
+            className={cn(
+              'flex items-center gap-1.5 text-xs font-bold',
+              depth === 'chest' ? 'text-red-300' : 'text-white/90',
+            )}
+          >
+            <Waves className="size-4" aria-hidden /> {t(`depth.${depth}`)}
+          </p>
+          <p className="flex items-center gap-1.5 text-xs text-white/90">
+            <Users className="size-4" aria-hidden /> {t('followers', { count: followers })}
+          </p>
+        </>
+      )}
     </div>
   );
+}
+
+/**
+ * Touch action cluster (right thumb zone): Jump (tap) and Sprint (hold). Sized for phones in
+ * landscape; keyboard/gamepad users get Space / Shift / A / LT instead.
+ */
+function ActionButtons() {
+  const t = useTranslations('game');
+  const sprint = useGame((s) => s.sprintUi);
+  const release = () => inputActions.setSprint(false);
+  return (
+    <div className="flex items-end gap-3">
+      <button
+        type="button"
+        aria-label={t('sprint')}
+        onPointerDown={(e) => {
+          e.currentTarget.setPointerCapture(e.pointerId);
+          inputActions.setSprint(true);
+        }}
+        onPointerUp={release}
+        onPointerCancel={release}
+        onLostPointerCapture={release}
+        onContextMenu={(e) => e.preventDefault()}
+        disabled={sprint === 'exhausted'}
+        className={cn(
+          'flex size-16 touch-none flex-col items-center justify-center rounded-full text-[11px] font-bold shadow-xl transition-transform active:scale-95',
+          sprint === 'sprinting'
+            ? 'bg-signal-amber text-storm-slate'
+            : 'bg-storm-slate/85 text-white disabled:opacity-50',
+        )}
+      >
+        <Footprints className="size-6" aria-hidden />
+        {t('sprint')}
+      </button>
+      <button
+        type="button"
+        aria-label={t('jump')}
+        onPointerDown={() => inputActions.jump()}
+        onContextMenu={(e) => e.preventDefault()}
+        className="bg-storm-slate/85 flex size-20 touch-none flex-col items-center justify-center rounded-full text-xs font-bold text-white shadow-xl transition-transform active:scale-95"
+      >
+        <ArrowUpFromLine className="size-7" aria-hidden />
+        {t('jump')}
+      </button>
+    </div>
+  );
+}
+
+/** One-time keyboard tip for desktop players. */
+function useControlsTip(touch: boolean) {
+  const t = useTranslations('game');
+  useEffect(() => {
+    if (touch) return;
+    const id = window.setTimeout(() => useGame.getState().showHint(t('controlsTip'), 'info'), 1500);
+    return () => window.clearTimeout(id);
+  }, [touch, t]);
 }
 
 function Compass() {
@@ -186,10 +267,16 @@ function PrepPanel({ onEvacuate }: { onEvacuate: () => void }) {
   const weight = bagWeight(packed, content);
   const limit = config?.weightLimitKg ?? 8;
   const ratio = Math.min(1, weight / limit);
-  const [open, setOpen] = useState(true);
+  // Small screens (phone landscape or portrait) start collapsed so the panel never covers the
+  // action buttons; tap the header to expand.
+  const [open, setOpen] = useState(
+    () =>
+      typeof window === 'undefined' ||
+      !window.matchMedia('(max-height: 500px), (max-width: 639px)').matches,
+  );
 
   return (
-    <div className="bg-storm-slate/90 w-64 rounded-lg p-3 text-white shadow-xl sm:w-72">
+    <div className="bg-storm-slate/90 w-60 rounded-lg p-3 text-white shadow-xl sm:w-72 [@media(max-height:500px)]:p-2">
       <button
         className="flex min-h-9 w-full items-center justify-between gap-2"
         onClick={() => setOpen((o) => !o)}
@@ -220,7 +307,7 @@ function PrepPanel({ onEvacuate }: { onEvacuate: () => void }) {
       </div>
       {open && (
         <>
-          <ul className="mt-2 flex max-h-28 flex-wrap gap-1 overflow-y-auto">
+          <ul className="mt-2 flex max-h-28 flex-wrap gap-1 overflow-y-auto [@media(max-height:500px)]:max-h-14">
             {packed.length === 0 && <li className="text-xs text-white/70">{t('bagEmpty')}</li>}
             {packed.map((k) => (
               <li key={k}>
@@ -253,7 +340,7 @@ function PrepPanel({ onEvacuate }: { onEvacuate: () => void }) {
       )}
       <button
         onClick={onEvacuate}
-        className="bg-signal-amber text-storm-slate mt-3 min-h-11 w-full rounded-lg font-bold shadow"
+        className="bg-signal-amber text-storm-slate mt-3 min-h-11 w-full rounded-lg font-bold shadow [@media(max-height:500px)]:mt-2"
       >
         {t('evacuateNow')}
       </button>
@@ -353,10 +440,10 @@ function TutorialCoach() {
   if (!tutorial || phase !== 'prep') return null;
   return (
     <div
-      className="absolute inset-x-0 bottom-40 flex justify-center px-6 sm:bottom-28"
+      className="absolute inset-x-0 bottom-40 flex justify-center px-6 sm:bottom-28 [@media(max-height:500px)]:inset-x-[11rem] [@media(max-height:500px)]:bottom-3 [@media(max-height:500px)]:px-0"
       role="status"
     >
-      <p className="border-signal-amber max-w-md rounded-lg border-2 bg-white/95 px-4 py-3 text-center text-sm font-bold text-slate-900 shadow-xl">
+      <p className="border-signal-amber max-w-md rounded-lg border-2 bg-white/95 px-4 py-3 text-center text-sm font-bold text-slate-900 shadow-xl [@media(max-height:500px)]:px-3 [@media(max-height:500px)]:py-2 [@media(max-height:500px)]:text-xs">
         {t(`step${Math.min(step, 3)}` as 'step0')}
       </p>
     </div>
@@ -375,12 +462,13 @@ export function Hud({
   const t = useTranslations('game');
   const phase = useGame((s) => s.phase);
   const touch = useIsTouch();
+  useControlsTip(touch);
   if (phase !== 'prep' && phase !== 'evac') return null;
   return (
     <div className="pointer-events-none absolute inset-0 select-none [&_[role=application]]:pointer-events-auto [&_button]:pointer-events-auto">
       <div className="absolute top-[calc(env(safe-area-inset-top)+0.75rem)] left-[calc(env(safe-area-inset-left)+0.75rem)] flex items-start gap-2">
         <Timer />
-        {phase === 'evac' && <Vitals />}
+        <Vitals evac={phase === 'evac'} />
       </div>
       <div className="absolute top-[calc(env(safe-area-inset-top)+0.75rem)] right-[calc(env(safe-area-inset-right)+0.75rem)] flex items-start gap-2">
         {phase === 'evac' && <Compass />}
@@ -396,12 +484,13 @@ export function Hud({
       <HintToast />
       <TutorialCoach />
       {phase === 'prep' && (
-        <div className="absolute top-24 right-[calc(env(safe-area-inset-right)+0.75rem)] sm:top-[calc(env(safe-area-inset-top)+4.5rem)]">
+        <div className="absolute top-24 right-[calc(env(safe-area-inset-right)+0.75rem)] sm:top-[calc(env(safe-area-inset-top)+4.5rem)] [@media(max-height:500px)]:top-[calc(env(safe-area-inset-top)+0.75rem)] [@media(max-height:500px)]:right-[calc(env(safe-area-inset-right)+4.25rem)]">
           <PrepPanel onEvacuate={onEvacuate} />
         </div>
       )}
-      <div className="absolute right-[calc(env(safe-area-inset-right)+1rem)] bottom-[calc(env(safe-area-inset-bottom)+1rem)]">
+      <div className="absolute right-[calc(env(safe-area-inset-right)+1rem)] bottom-[calc(env(safe-area-inset-bottom)+1rem)] flex flex-col items-end gap-3 [@media(max-height:500px)]:flex-row">
         <InteractButton />
+        {touch && <ActionButtons />}
       </div>
       {touch && (
         <div className="pointer-events-auto absolute bottom-[calc(env(safe-area-inset-bottom)+1rem)] left-[calc(env(safe-area-inset-left)+1rem)]">

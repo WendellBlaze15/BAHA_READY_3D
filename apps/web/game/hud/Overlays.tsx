@@ -246,6 +246,13 @@ export function PauseMenu({
 export function RotatePrompt() {
   const t = useTranslations('game');
   const [portrait, setPortrait] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  // Non-blocking: fades out on its own so it never hides the HUD for long.
+  useEffect(() => {
+    if (!portrait || dismissed) return;
+    const id = window.setTimeout(() => setDismissed(true), 6000);
+    return () => window.clearTimeout(id);
+  }, [portrait, dismissed]);
   useEffect(() => {
     const mq = window.matchMedia(
       '(orientation: portrait) and (pointer: coarse) and (max-width: 700px)',
@@ -255,13 +262,15 @@ export function RotatePrompt() {
     mq.addEventListener('change', f);
     return () => mq.removeEventListener('change', f);
   }, []);
-  if (!portrait) return null;
+  if (!portrait || dismissed) return null;
   return (
-    <div
-      className="absolute inset-x-3 top-24 z-20 flex items-center gap-2 rounded-lg bg-white/95 p-3 text-sm font-bold text-slate-900 shadow-xl"
+    <button
+      type="button"
+      onClick={() => setDismissed(true)}
+      className="absolute inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+17rem)] z-20 flex items-center gap-2 rounded-lg bg-white/95 p-3 text-left text-sm font-bold text-slate-900 shadow-xl"
       role="status"
     >
       <Smartphone className="size-5 shrink-0 rotate-90" aria-hidden /> {t('rotate')}
-    </div>
+    </button>
   );
 }

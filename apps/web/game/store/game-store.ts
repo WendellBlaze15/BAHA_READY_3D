@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import type { GameContent, GameEvent, Layout } from '@baha/shared/game';
+import { initialSprintState } from '@baha/shared/game';
 import type { LevelConfig } from '@baha/shared/level-config';
 
 export type Phase = 'loading' | 'briefing' | 'countdown' | 'prep' | 'evac' | 'ended';
@@ -32,6 +33,11 @@ export const live = {
   speed: 0,
   health: 100,
   stamina: 100,
+  /** Sprint lockout state (shared rules: @baha/shared/game stamina.ts). */
+  sprint: initialSprintState(),
+  /** Vertical velocity (m/s) for jumps; 0 on the ground. */
+  vy: 0,
+  airborne: false,
   lastPosSampleT: -1,
   lightningFlash: 0,
   interactTarget: null as null | { kind: 'item' | 'task' | 'npc'; key: string; label: string },
@@ -61,6 +67,8 @@ export type GameState = {
   announcement: { text: string; at: number } | null;
   healthUi: number;
   staminaUi: number;
+  /** Sprint HUD state; "exhausted" = Hingal lockout. */
+  sprintUi: 'ready' | 'sprinting' | 'exhausted';
   timeUi: number;
   depthUi: 'dry' | 'ankle' | 'knee' | 'waist' | 'chest';
   outcome: null | {
@@ -119,6 +127,7 @@ const initial: GameState = {
   announcement: null,
   healthUi: 100,
   staminaUi: 100,
+  sprintUi: 'ready',
   timeUi: 0,
   depthUi: 'dry',
   outcome: null,
@@ -144,6 +153,9 @@ export const useGame = create<GameState & Actions>()(
         speed: 0,
         health: 100,
         stamina: 100,
+        sprint: initialSprintState(),
+        vy: 0,
+        airborne: false,
         lastPosSampleT: -1,
         lightningFlash: 0,
         interactTarget: null,
