@@ -187,7 +187,11 @@
     "strength3": "malakas",
     "strength4": "napakalakas",
     "signOut": "Mag-sign out",
-    "privacyNote": "Sa pag-sign up, sumasang-ayon ka sa aming Privacy Notice at Mga Tuntunin."
+    "privacyNote": "Sa pag-sign up, sumasang-ayon ka sa aming Privacy Notice at Mga Tuntunin.",
+    "facilitatorTitle": "Guro, SK, o opisyal ng barangay?",
+    "facilitatorHow": "Gumawa muna ng account, tapos mag-apply bilang facilitator. Susuriin ng admin ang application mo (karaniwan sa loob ng 1–2 araw) at makakatanggap ka ng email kapag naaprubahan.",
+    "facilitatorCta": "Mag-sign up bilang facilitator →",
+    "facilitatorSelected": "Pagkatapos i-verify ang email mo at kumpletuhin ang profile, dadalhin ka namin diretso sa facilitator application."
   },
   "mfa": {
     "title": "Two-factor authentication",
@@ -202,7 +206,9 @@
     "copied": "Nakopya",
     "verifyAndContinue": "I-verify at magpatuloy",
     "loading": "Inihahanda ang MFA…",
-    "success": "Naka-on na ang two-factor authentication."
+    "success": "Naka-on na ang two-factor authentication.",
+    "codeInvalid": "Hindi tugma ang code. Hintayin ang bagong code sa authenticator app at subukan ulit. Kung patuloy na mali, siguraduhing naka-automatic ang petsa at oras ng phone mo.",
+    "clockSkew": "Mali ng mga {minutes} minuto ang orasan ng device na ito. Kung nandito ang authenticator app mo, hindi magtutugma ang mga code. I-on ang automatic na petsa at oras, tapos subukan ulit."
   },
   "onboarding": {
     "title": "Ihanda ang profile mo",

@@ -2,9 +2,10 @@
 
 import { useTranslations } from 'next-intl';
 import { LogOut, Settings, User } from 'lucide-react';
-import { Link, useRouter } from '@/i18n/navigation';
+import { Link } from '@/i18n/navigation';
 import { apiPost } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
+import { useAuthTransition } from '@/lib/auth/auth-transition';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,7 +17,7 @@ import {
 
 export function UserMenu({ username, avatar }: { username: string; avatar: React.ReactNode }) {
   const t = useTranslations();
-  const router = useRouter();
+  const authTransition = useAuthTransition();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -43,8 +44,7 @@ export function UserMenu({ username, avatar }: { username: string; avatar: React
             try {
               await apiPost('/api/auth/signout', {});
             } finally {
-              router.replace('/');
-              router.refresh();
+              authTransition('/');
             }
           }}
         >

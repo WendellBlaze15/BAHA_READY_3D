@@ -187,7 +187,11 @@
     "strength3": "strong",
     "strength4": "very strong",
     "signOut": "Sign out",
-    "privacyNote": "By signing up, you agree to our Privacy Notice and Terms."
+    "privacyNote": "By signing up, you agree to our Privacy Notice and Terms.",
+    "facilitatorTitle": "Teacher, SK or barangay official?",
+    "facilitatorHow": "Create your account first, then apply as a facilitator. An admin reviews your application (usually within 1–2 days) and you'll get an email once approved.",
+    "facilitatorCta": "Sign up as a facilitator →",
+    "facilitatorSelected": "After you verify your email and finish your profile, we'll take you straight to the facilitator application."
   },
   "mfa": {
     "title": "Two-factor authentication",
@@ -202,7 +206,9 @@
     "copied": "Copied",
     "verifyAndContinue": "Verify and continue",
     "loading": "Preparing MFA…",
-    "success": "Two-factor authentication is on."
+    "success": "Two-factor authentication is on.",
+    "codeInvalid": "That code didn't match. Wait for a fresh code in your authenticator app and try again. If it keeps failing, make sure your phone's date & time is set to automatic.",
+    "clockSkew": "This device's clock is off by about {minutes} min. If your authenticator app is on this device, codes won't match. Turn on automatic date & time, then try again."
   },
   "onboarding": {
     "title": "Set up your profile",

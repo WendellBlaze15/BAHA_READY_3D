@@ -22,9 +22,11 @@
     "db:check-levels": "tsx scripts/check-level-configs.ts",
     "db:advisors": "node scripts/advisors.mjs",
     "functions:sync": "node scripts/sync-functions-shared.mjs",
-    "functions:deploy": "node scripts/sync-functions-shared.mjs && node scripts/with-env.mjs supabase functions deploy --use-api"
+    "functions:deploy": "node scripts/sync-functions-shared.mjs && node scripts/with-env.mjs supabase functions deploy --use-api",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@commitlint/cli": "^21.2.3",
     "@commitlint/config-conventional": "^21.2.3",
     "@playwright/test": "^1.63.0",

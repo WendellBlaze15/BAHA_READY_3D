@@ -14,7 +14,11 @@ export function nextStepAfterSignIn(session: Session, requested?: string | null)
   if (hasVerifiedTotp && claims?.aal !== 'aal2') {
     return { next: `/mfa${safeNext ? `?next=${encodeURIComponent(safeNext)}` : ''}`, mfa: true };
   }
-  if (!claims?.onboarded) return { next: '/onboarding', mfa: false };
+  if (!claims?.onboarded)
+    return {
+      next: `/onboarding${safeNext ? `?next=${encodeURIComponent(safeNext)}` : ''}`,
+      mfa: false,
+    };
   const staffHome =
     claims.user_role === 'super_admin' ? '/super' : claims.user_role === 'admin' ? '/admin' : null;
   return { next: safeNext ?? staffHome ?? '/home', mfa: false };

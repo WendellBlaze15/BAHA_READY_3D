@@ -5,7 +5,6 @@ import { useLocale, useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import { Loader2, Mail, MailCheck } from 'lucide-react';
 import { emailSchema } from '@baha/shared/auth';
-import { useRouter } from '@/i18n/navigation';
 import { apiPost, ApiClientError } from '@/lib/api/client';
 import { useCountdown } from '@/hooks/use-countdown';
 import { Button } from '@/components/ui/button';
@@ -13,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { OtpCodeField } from './otp-code-field';
 import { Honeypot } from './honeypot';
+import { useAuthTransition } from '@/lib/auth/auth-transition';
 import { useApiErrorText, useFieldErrorText } from './use-api-error';
 
 type Step = { kind: 'email' } | { kind: 'code'; email: string };
@@ -20,7 +20,7 @@ type Step = { kind: 'email' } | { kind: 'code'; email: string };
 export function EmailOtpFlow({ mode }: { mode: 'signin' | 'signup' }) {
   const t = useTranslations('auth');
   const locale = useLocale();
-  const router = useRouter();
+  const authTransition = useAuthTransition();
   const params = useSearchParams();
   const errText = useApiErrorText();
   const fieldText = useFieldErrorText();
@@ -74,8 +74,7 @@ export function EmailOtpFlow({ mode }: { mode: 'signin' | 'signup' }) {
         `/api/auth/otp/verify${next ? `?next=${encodeURIComponent(next)}` : ''}`,
         { email: step.email, token },
       );
-      router.replace(res.next);
-      router.refresh();
+      authTransition(res.next);
     } catch (e) {
       setCode('');
       if (e instanceof ApiClientError) {

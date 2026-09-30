@@ -44,3 +44,5 @@ Thumbs.db
 apps/web/public/sw.js
 apps/web/public/sw.js.map
 apps/web/public/swe-worker-*.js
+playwright-report
+test-results

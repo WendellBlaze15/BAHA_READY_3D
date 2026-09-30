@@ -5,11 +5,11 @@ import { useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import { Check, Copy, Loader2, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
-import { useRouter } from '@/i18n/navigation';
 import { getSupabaseBrowser } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { OtpCodeField } from './otp-code-field';
+import { useAuthTransition } from '@/lib/auth/auth-transition';
 import { useFieldErrorText } from './use-api-error';
 
 type State =
@@ -21,7 +21,7 @@ type State =
 export function MfaFlow() {
   const t = useTranslations('mfa');
   const fieldText = useFieldErrorText();
-  const router = useRouter();
+  const authTransition = useAuthTransition();
   const params = useSearchParams();
   const ids = { code: useId(), err: useId() };
   const [state, setState] = useState<State>({ kind: 'loading' });
@@ -29,6 +29,22 @@ export function MfaFlow() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [copied, setCopied] = useState(false);
+  const [skewMin, setSkewMin] = useState(0);
+
+  // TOTP codes are time-based: a device clock off by more than ~30s produces "wrong" codes.
+  // Compare against the server clock so we can tell the user instead of a generic error.
+  useEffect(() => {
+    const t0 = Date.now();
+    fetch('/api/health', { cache: 'no-store' })
+      .then((r) => {
+        const server = Date.parse(r.headers.get('date') ?? '');
+        if (!Number.isFinite(server)) return;
+        const local = (t0 + Date.now()) / 2;
+        const skew = Math.abs(local - server);
+        if (skew > 45_000) setSkewMin(Math.max(1, Math.round(skew / 60_000)));
+      })
+      .catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     const supabase = getSupabaseBrowser();
@@ -76,15 +92,14 @@ export function MfaFlow() {
     });
     if (err) {
       setCode('');
-      setError(fieldText('errors.otp_invalid'));
+      setError(t('codeInvalid'));
       setBusy(false);
       return;
     }
     if (state.kind === 'enroll') toast.success(t('success'));
     const next = params.get('next');
     const safe = next && next.startsWith('/') && !next.startsWith('//') ? next : '/home';
-    router.replace(safe);
-    router.refresh();
+    authTransition(safe);
   }
 
   if (state.kind === 'loading') {
@@ -95,6 +110,15 @@ export function MfaFlow() {
       </div>
     );
   }
+
+  const skewWarning = skewMin > 0 && (
+    <p
+      role="status"
+      className="border-signal-amber/60 bg-signal-amber/10 rounded-lg border p-3 text-sm"
+    >
+      {t('clockSkew', { minutes: skewMin })}
+    </p>
+  );
 
   const codeForm = (
     <form
@@ -134,6 +158,7 @@ export function MfaFlow() {
     return (
       <div className="space-y-4">
         <p>{t('challengeLede')}</p>
+        {skewWarning}
         {codeForm}
       </div>
     );
@@ -178,7 +203,10 @@ export function MfaFlow() {
             </div>
           </div>
         </li>
-        <li>{codeForm}</li>
+        <li className="space-y-3">
+          {skewWarning}
+          {codeForm}
+        </li>
       </ol>
     </div>
   );

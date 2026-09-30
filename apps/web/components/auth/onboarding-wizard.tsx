@@ -98,7 +98,9 @@ export function OnboardingWizard() {
         username: form.username.trim(),
         barangay: barangayChoice === OTHER ? form.barangay : barangayChoice,
       });
-      router.replace(res.next);
+      const want = new URLSearchParams(window.location.search).get('next');
+      const safe = want && want.startsWith('/') && !want.startsWith('//') ? want : res.next;
+      router.replace(safe);
       router.refresh();
     } catch (e) {
       if (e instanceof ApiClientError && e.fields.username) {

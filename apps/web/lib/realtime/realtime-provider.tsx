@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { useRouter } from '@/i18n/navigation';
 import { getSupabaseBrowser } from '@/lib/supabase/client';
 import { qk } from '@/lib/query-keys';
+import { useAuthTransition } from '@/lib/auth/auth-transition';
 import type { NotificationRow } from '@/lib/data/me';
 
 type RealtimeState = { connected: boolean };
@@ -28,6 +29,7 @@ export function RealtimeProvider({
 }) {
   const qc = useQueryClient();
   const router = useRouter();
+  const authTransition = useAuthTransition();
   const [connected, setConnected] = useState(false);
   const wasDisconnected = useRef(false);
   const groupKey = groupIds.join(',');
@@ -89,8 +91,7 @@ export function RealtimeProvider({
           })
           .on('broadcast', { event: 'session_revoked' }, async () => {
             await supabase.auth.signOut({ scope: 'local' });
-            router.replace('/sign-in');
-            router.refresh();
+            authTransition('/sign-in');
           })
           .on(
             'broadcast',
@@ -263,7 +264,7 @@ export function RealtimeProvider({
     return () => {
       for (const c of channels) void supabase.removeChannel(c);
     };
-  }, [userId, groupKey, qc, router]);
+  }, [userId, groupKey, qc, router, authTransition]);
 
   return <Ctx.Provider value={{ connected }}>{children}</Ctx.Provider>;
 }

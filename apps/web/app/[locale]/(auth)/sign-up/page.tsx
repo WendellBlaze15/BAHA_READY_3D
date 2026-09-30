@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
-import { Check } from 'lucide-react';
+import { Check, GraduationCap } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { EmailOtpFlow } from '@/components/auth/email-otp-flow';
 
@@ -10,8 +10,15 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t('signUpTitle') };
 }
 
-export default async function SignUpPage({ params }: { params: Promise<{ locale: string }> }) {
+export default async function SignUpPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<{ next?: string }>;
+}) {
   const { locale } = await params;
+  const asFacilitator = (await searchParams).next === '/apply';
   setRequestLocale(locale);
   const t = await getTranslations();
   const perks = [t('authSide.bullet1'), t('authSide.bullet2')];
@@ -32,6 +39,23 @@ export default async function SignUpPage({ params }: { params: Promise<{ locale:
       <Suspense>
         <EmailOtpFlow mode="signup" />
       </Suspense>
+      <div className="border-primary/30 bg-primary/5 flex items-start gap-3 rounded-lg border p-4">
+        <GraduationCap className="text-primary mt-0.5 size-5 shrink-0" aria-hidden />
+        <div className="space-y-2 text-sm">
+          <p className="font-bold">{t('auth.facilitatorTitle')}</p>
+          <p className="text-muted-foreground">
+            {asFacilitator ? t('auth.facilitatorSelected') : t('auth.facilitatorHow')}
+          </p>
+          {!asFacilitator && (
+            <Link
+              href={{ pathname: '/sign-up', query: { next: '/apply' } }}
+              className="text-link inline-flex min-h-11 items-center font-bold underline"
+            >
+              {t('auth.facilitatorCta')}
+            </Link>
+          )}
+        </div>
+      </div>
       <p className="text-muted-foreground text-xs leading-relaxed">
         {t('auth.privacyNote')}{' '}
         <Link href="/privacy" className="underline">

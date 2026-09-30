@@ -26,14 +26,12 @@ export function SystemAnnouncement() {
           e.preventDefault();
           setBusy(true);
           const { data: s } = await getSupabaseBrowser().auth.getSession();
-          const { error } = await getSupabaseBrowser()
-            .from('announcements')
-            .insert({
-              scope: 'system',
-              title: title.trim(),
-              body: body.trim(),
-              created_by: s.session?.user.id,
-            });
+          const { error } = await getSupabaseBrowser().from('announcements').insert({
+            scope: 'system',
+            title: title.trim(),
+            body: body.trim(),
+            created_by: s.session?.user.id,
+          });
           setBusy(false);
           if (error) return toast.error(error.message);
           toast.success(t('done'));

@@ -4,18 +4,19 @@ import { useId, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
-import { Link, useRouter } from '@/i18n/navigation';
+import { Link } from '@/i18n/navigation';
 import { apiPost, ApiClientError } from '@/lib/api/client';
 import { useCountdown } from '@/hooks/use-countdown';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Honeypot } from './honeypot';
+import { useAuthTransition } from '@/lib/auth/auth-transition';
 import { useApiErrorText, useFieldErrorText } from './use-api-error';
 
 export function PasswordSignInForm() {
   const t = useTranslations('auth');
-  const router = useRouter();
+  const authTransition = useAuthTransition();
   const params = useSearchParams();
   const errText = useApiErrorText();
   const fieldText = useFieldErrorText();
@@ -42,8 +43,7 @@ export function PasswordSignInForm() {
         `/api/auth/password${next ? `?next=${encodeURIComponent(next)}` : ''}`,
         { identifier: identifier.trim(), password, website: honeypot.current?.value ?? '' },
       );
-      router.replace(res.next);
-      router.refresh();
+      authTransition(res.next);
     } catch (err) {
       if (err instanceof ApiClientError && err.retryAfter) lock.start(err.retryAfter);
       setError(
