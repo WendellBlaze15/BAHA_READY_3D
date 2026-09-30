@@ -67,7 +67,7 @@ export function PasswordSignInForm() {
           spellCheck={false}
           value={identifier}
           onChange={(e) => setIdentifier(e.target.value)}
-          className="h-12 text-base"
+          className="bg-background h-13 rounded-lg text-base"
           aria-invalid={!!error || undefined}
           aria-describedby={error ? ids.err : undefined}
         />
@@ -86,7 +86,7 @@ export function PasswordSignInForm() {
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="h-12 pr-12 text-base"
+            className="bg-background h-13 rounded-lg pr-12 text-base"
             aria-invalid={!!error || undefined}
             aria-describedby={error ? ids.err : undefined}
           />
@@ -94,7 +94,7 @@ export function PasswordSignInForm() {
             type="button"
             variant="ghost"
             size="icon"
-            className="absolute top-0.5 right-0.5 size-11"
+            className="absolute top-1 right-1 size-11"
             onClick={() => setShow((s) => !s)}
             aria-label={show ? 'Hide password' : 'Show password'}
             aria-pressed={show}
@@ -108,7 +108,11 @@ export function PasswordSignInForm() {
           {error}
         </p>
       )}
-      <Button type="submit" className="h-12 w-full text-base" disabled={busy || lock.remaining > 0}>
+      <Button
+        type="submit"
+        className="bg-signal-amber text-storm-slate hover:bg-signal-amber/90 h-13 w-full rounded-lg text-base font-bold shadow-sm"
+        disabled={busy || lock.remaining > 0}
+      >
         {busy ? <Loader2 className="animate-spin" aria-hidden /> : null}
         {lock.remaining > 0 ? t('resendIn', { seconds: lock.remaining }) : t('signInWithPassword')}
       </Button>

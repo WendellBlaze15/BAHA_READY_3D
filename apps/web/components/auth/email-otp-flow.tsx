@@ -3,7 +3,7 @@
 import { useId, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
-import { Loader2, MailCheck } from 'lucide-react';
+import { Loader2, Mail, MailCheck } from 'lucide-react';
 import { emailSchema } from '@baha/shared/auth';
 import { useRouter } from '@/i18n/navigation';
 import { apiPost, ApiClientError } from '@/lib/api/client';
@@ -99,20 +99,26 @@ export function EmailOtpFlow({ mode }: { mode: 'signin' | 'signup' }) {
         <Honeypot ref={honeypot} />
         <div className="space-y-1.5">
           <Label htmlFor={ids.email}>{t('emailLabel')}</Label>
-          <Input
-            id={ids.email}
-            type="email"
-            inputMode="email"
-            autoComplete="email"
-            autoFocus
-            required
-            placeholder={t('emailPlaceholder')}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            aria-invalid={!!error || undefined}
-            aria-describedby={error ? ids.emailErr : undefined}
-            className="h-12 text-base"
-          />
+          <div className="relative">
+            <Mail
+              className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2"
+              aria-hidden
+            />
+            <Input
+              id={ids.email}
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              autoFocus
+              required
+              placeholder={t('emailPlaceholder')}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              aria-invalid={!!error || undefined}
+              aria-describedby={error ? ids.emailErr : undefined}
+              className="bg-background h-13 rounded-lg pl-11 text-base"
+            />
+          </div>
           {error && (
             <p id={ids.emailErr} role="alert" className="text-destructive text-sm">
               {error}
@@ -121,7 +127,7 @@ export function EmailOtpFlow({ mode }: { mode: 'signin' | 'signup' }) {
         </div>
         <Button
           type="submit"
-          className="h-12 w-full text-base"
+          className="bg-signal-amber text-storm-slate hover:bg-signal-amber/90 h-13 w-full rounded-lg text-base font-bold shadow-sm"
           disabled={busy || cooldown.remaining > 0}
         >
           {busy ? <Loader2 className="animate-spin" aria-hidden /> : null}
@@ -170,7 +176,11 @@ export function EmailOtpFlow({ mode }: { mode: 'signin' | 'signup' }) {
           </p>
         )}
       </div>
-      <Button type="submit" className="h-12 w-full text-base" disabled={busy || code.length !== 6}>
+      <Button
+        type="submit"
+        className="bg-signal-amber text-storm-slate hover:bg-signal-amber/90 h-13 w-full rounded-lg text-base font-bold shadow-sm"
+        disabled={busy || code.length !== 6}
+      >
         {busy ? <Loader2 className="animate-spin" aria-hidden /> : null}
         {busy ? t('verifying') : t('verify')}
       </Button>

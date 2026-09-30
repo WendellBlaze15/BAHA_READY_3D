@@ -1,4 +1,13 @@
 {
+  "authSide": {
+    "headline": "Bawat level, isang aral na makapagliligtas ng buhay.",
+    "bullet1": "Mag-impake ng go-bag na may tamang timbang at laman",
+    "bullet2": "Lumikas nang ligtas at tulungan ang kapitbahay",
+    "bullet3": "Libre, walang ads, at protektado ang data mo (RA 10173)",
+    "welcomeBack": "Maligayang pagbabalik",
+    "newHere": "Bago ka rito?",
+    "or": "o"
+  },
   "dashboard": {
     "title": "Home",
     "greeting": "Kumusta, {name}!",

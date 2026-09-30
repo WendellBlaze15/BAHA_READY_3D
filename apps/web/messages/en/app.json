@@ -1,4 +1,13 @@
 {
+  "authSide": {
+    "headline": "Every level, a lesson that can save a life.",
+    "bullet1": "Pack a go-bag with the right weight and contents",
+    "bullet2": "Evacuate safely and help your neighbors",
+    "bullet3": "Free, no ads, and your data is protected (RA 10173)",
+    "welcomeBack": "Welcome back",
+    "newHere": "New here?",
+    "or": "or"
+  },
   "dashboard": {
     "title": "Home",
     "greeting": "Hi, {name}!",

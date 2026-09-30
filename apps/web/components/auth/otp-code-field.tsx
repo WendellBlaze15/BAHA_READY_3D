@@ -37,14 +37,15 @@ export function OtpCodeField({
       aria-label={label}
       aria-invalid={invalid || undefined}
       aria-describedby={describedBy}
-      containerClassName="justify-start"
+      containerClassName="w-full"
     >
-      <InputOTPGroup className="gap-2">
+      {/* Fluid grid: six equal boxes that fit from 320px phones up. */}
+      <InputOTPGroup className="grid w-full grid-cols-6 gap-1.5 sm:gap-2">
         {Array.from({ length: 6 }, (_, i) => (
           <InputOTPSlot
             key={i}
             index={i}
-            className="font-display size-12 rounded-sm border text-2xl font-bold first:rounded-sm last:rounded-sm sm:size-14"
+            className="font-display bg-background h-13 w-full rounded-lg border text-2xl font-bold first:rounded-lg first:border-l last:rounded-lg sm:h-14"
           />
         ))}
       </InputOTPGroup>

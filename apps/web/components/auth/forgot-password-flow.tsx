@@ -95,7 +95,7 @@ export function ForgotPasswordFlow() {
             autoFocus
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="h-12 text-base"
+            className="bg-background h-13 rounded-lg text-base"
             aria-invalid={!!error || undefined}
             aria-describedby={error ? ids.err : undefined}
           />
@@ -141,7 +141,7 @@ export function ForgotPasswordFlow() {
           autoComplete="new-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="h-12 text-base"
+          className="bg-background h-13 rounded-lg text-base"
           aria-describedby={`${ids.strength} ${error ? ids.err : ''}`}
         />
         <p className="text-muted-foreground text-xs">{t('newPasswordHint')}</p>
@@ -152,7 +152,11 @@ export function ForgotPasswordFlow() {
           {error}
         </p>
       )}
-      <Button type="submit" className="h-12 w-full text-base" disabled={busy}>
+      <Button
+        type="submit"
+        className="bg-signal-amber text-storm-slate hover:bg-signal-amber/90 h-13 w-full rounded-lg text-base font-bold shadow-sm"
+        disabled={busy}
+      >
         {busy && <Loader2 className="animate-spin" aria-hidden />}
         {t('savePassword')}
       </Button>
