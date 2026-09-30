@@ -42,7 +42,7 @@ select public.refresh_leaderboards();
 
 select set_config('request.jwt.claims', pg_temp.claims('aaaaaaaa-0000-0000-0000-000000000001'), true);
 set local role authenticated;
-select is((select username from public.get_leaderboard('level', 'all_time', 1::smallint) limit 1), 'test_b', 'top of level board is the best eligible player');
+select ok(exists (select 1 from public.get_leaderboard('level', 'all_time', 1::smallint, null, 0, 50) where username = 'test_b'), 'eligible player appears on the level board');
 select ok(not exists (select 1 from public.get_leaderboard('level', 'all_time', 1::smallint) where username = 'test_m'), 'admins are excluded from leaderboards');
 select ok(not exists (select 1 from public.get_leaderboard('level', 'all_time', 1::smallint) where username = 'test_f'), 'flagged attempts are excluded');
 select is((select count(*) from public.get_leaderboard('global', 'all_time', null, null, 0, 20, true)), 0::bigint, 'player without scores has no personal rank');

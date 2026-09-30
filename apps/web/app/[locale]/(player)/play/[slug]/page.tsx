@@ -9,7 +9,7 @@ import type { AvatarConfig } from '@/lib/avatar/presets';
 
 type Params = {
   params: Promise<{ locale: string; slug: string }>;
-  searchParams: Promise<{ mode?: string; session?: string }>;
+  searchParams: Promise<{ mode?: string; session?: string; sandbox?: string }>;
 };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
@@ -22,7 +22,7 @@ const GUEST_LEVELS = new Set(['tutorial', 'signal-1']);
 
 export default async function PlayPage({ params, searchParams }: Params) {
   const { locale, slug } = await params;
-  const { mode, session } = await searchParams;
+  const { mode, session, sandbox } = await searchParams;
   const liveSessionId =
     mode === 'live' && session && /^[0-9a-f-]{36}$/.test(session) ? session : undefined;
   setRequestLocale(locale);
@@ -75,6 +75,12 @@ export default async function PlayPage({ params, searchParams }: Params) {
       settings={settings as never}
       mode={liveSessionId ? 'live' : mode === 'daily' ? 'daily' : 'normal'}
       liveSessionId={liveSessionId}
+      sandbox={
+        sandbox === '1' &&
+        ((claims?.claims as { permissions?: string[] } | undefined)?.permissions ?? []).includes(
+          'content.manage',
+        )
+      }
       me={uid ? { id: uid, username: username ?? '' } : undefined}
     />
   );

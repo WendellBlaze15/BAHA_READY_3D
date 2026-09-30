@@ -10,7 +10,7 @@ import {
   type AttemptResult,
   type GameContent,
 } from '@baha/shared/game';
-import type { LevelConfig } from '@baha/shared/level-config';
+import { levelConfigSchema, type LevelConfig } from '@baha/shared/level-config';
 import type { AvatarConfig } from '@/lib/avatar/presets';
 import { useRouter } from '@/i18n/navigation';
 import { qk } from '@/lib/query-keys';
@@ -50,6 +50,7 @@ export function GameRoot({
   mode = 'normal',
   liveSessionId,
   me,
+  sandbox = false,
 }: {
   level: GameLevel;
   config: LevelConfig;
@@ -68,6 +69,8 @@ export function GameRoot({
   mode?: 'normal' | 'daily' | 'live';
   liveSessionId?: string;
   me?: { id: string; username: string };
+  /** Admin test mode: draft config from Level Configuration, nothing is recorded. */
+  sandbox?: boolean;
 }) {
   const t = useTranslations('game');
   const locale = useLocale();
@@ -154,7 +157,15 @@ export function GameRoot({
     try {
       let seed = String(Math.floor(Math.random() * 2 ** 31));
       let cfg = baseConfig;
-      if (!guest) {
+      if (sandbox) {
+        try {
+          const raw = sessionStorage.getItem(`baha.sandbox.${level.slug}`);
+          const parsed = raw ? levelConfigSchema.safeParse(JSON.parse(raw)) : null;
+          if (parsed?.success) cfg = parsed.data;
+        } catch {
+          // fall back to the published config
+        }
+      } else if (!guest) {
         const res = await startAttempt({
           level_id: level.id,
           mode,
@@ -201,6 +212,10 @@ export function GameRoot({
       outcome: preview.outcome,
       durationMs: preview.durationMs,
     };
+    if (sandbox) {
+      setResults({ kind: 'guest', result: preview });
+      return;
+    }
     if (guest) {
       void saveGuestAttempt({
         level_id: level.id,
@@ -230,7 +245,7 @@ export function GameRoot({
         }
       })
       .catch(() => setResults({ kind: 'queued', result: preview }));
-  }, [phase, outcome, guest, level.id, qc]);
+  }, [phase, outcome, guest, sandbox, level.id, qc]);
 
   const evacuate = () => useGame.getState().setPhase('evac');
   const resume = () => {

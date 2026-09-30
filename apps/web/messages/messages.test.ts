@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { FEATURE_FILES } from './load';
+import { FEATURE_FILES } from './features';
 
 const dir = path.resolve(__dirname);
 const read = (p: string) =>

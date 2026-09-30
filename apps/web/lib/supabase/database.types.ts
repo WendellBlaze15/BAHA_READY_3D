@@ -1594,6 +1594,39 @@ export type Database = {
     }
     Functions: {
       abandon_stale_attempts: { Args: never; Returns: number }
+      admin_kpis: { Args: never; Returns: Json }
+      admin_reset_mfa: { Args: { p_user_id: string }; Returns: number }
+      admin_revoke_sessions: { Args: { p_user_id: string }; Returns: number }
+      admin_search_users: {
+        Args: {
+          p_limit?: number
+          p_offset?: number
+          p_query?: string
+          p_status?: string
+        }
+        Returns: {
+          attempts: number
+          created_at: string
+          email: string
+          id: string
+          mfa: boolean
+          roles: string[]
+          status: string
+          suspended_until: string
+          suspension_reason: string
+          total: number
+          username: string
+        }[]
+      }
+      admin_set_user_status: {
+        Args: {
+          p_reason?: string
+          p_status: string
+          p_until?: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       assignment_progress: {
         Args: { p_assignment_id: string }
         Returns: {
@@ -1621,6 +1654,22 @@ export type Database = {
       finalize_attempt: {
         Args: { p_attempt_id: string; p_result: Json }
         Returns: Json
+      }
+      flagged_attempts: {
+        Args: { p_include_voided?: boolean }
+        Returns: {
+          finished_at: string
+          flag_reasons: string[]
+          id: string
+          level_id: number
+          score: number
+          stars: number
+          started_at: string
+          status: string
+          user_id: string
+          username: string
+          void_reason: string
+        }[]
       }
       generate_code6: { Args: never; Returns: string }
       generate_daily_challenge: {
@@ -1698,6 +1747,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      moderate_attempt: {
+        Args: { p_action: string; p_attempt_id: string; p_reason: string }
+        Returns: undefined
+      }
       notify_user: {
         Args: {
           p_body?: string
@@ -1708,11 +1761,24 @@ export type Database = {
         }
         Returns: string
       }
+      publish_level_version: {
+        Args: { p_config: Json; p_level_id: number; p_notes?: string }
+        Returns: string
+      }
       purge_deleted_accounts: { Args: never; Returns: number }
       realtime_topic_id: { Args: { prefix: string }; Returns: string }
+      recompute_progress: {
+        Args: { p_level_id: number; p_user_id: string }
+        Returns: undefined
+      }
       refresh_leaderboards: { Args: never; Returns: undefined }
       regenerate_join_code: { Args: { gid: string }; Returns: string }
       remind_assignments: { Args: never; Returns: undefined }
+      security_overview: { Args: never; Returns: Json }
+      super_set_admin: {
+        Args: { p_make_admin: boolean; p_user_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
