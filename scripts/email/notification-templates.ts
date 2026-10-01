@@ -309,6 +309,21 @@ const SPECS: Record<string, Spec> = {
         'The admin role was removed from your account. If you didn’t expect this, contact a super admin.',
     },
   },
+  survival_run_expiring: {
+    subject: 'Mag-e-expire ang inyong Survival run · Your Survival run is expiring',
+    accent: brand.amber,
+    signal: 2,
+    fil: {
+      heading: 'Naghihintay pa ang inyong team!',
+      intro: `Hindi pa natatapos ang inyong Survival Mode run (Day ${P('day')}). Kapag hindi ito naituloy sa loob ng 3 araw, mawawala na ito.`,
+      cta: 'Ituloy ang laro',
+    },
+    en: {
+      heading: 'Your team is still waiting!',
+      intro: `Your Survival Mode run (Day ${P('day')}) isn’t finished yet. If nobody resumes it within 3 days, it will expire.`,
+      cta: 'Resume the game',
+    },
+  },
 };
 
 export function buildNotificationTemplates() {

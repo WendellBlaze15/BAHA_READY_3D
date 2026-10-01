@@ -2,12 +2,19 @@ import { createHash } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
+import { gunzipSync, gzipSync, strFromU8, strToU8 } from 'fflate';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { survivalConfigSchema } from '@baha/shared/survival';
 import type { Env } from '../env.ts';
 import { errInfo, log } from '../log.ts';
 import { randomCode } from './codes.ts';
-import { LIMITS, memoryCodeStore, memoryLimiter, memoryModeration } from './memory.ts';
+import {
+  LIMITS,
+  memoryCodeStore,
+  memoryLimiter,
+  memoryLiveRuns,
+  memoryModeration,
+} from './memory.ts';
 import type {
   ChatMode,
   ChatModeration,
@@ -15,12 +22,16 @@ import type {
   Eligibility,
   Identity,
   LimitAction,
+  LiveRuns,
   Persistence,
   RateLimiter,
+  RunRow,
   Services,
 } from './types.ts';
 
 const CODE_PREFIX = 'survival:code:';
+/** Snapshots above this are gzipped into state_gz (Section 16.6). */
+const SNAPSHOT_GZIP_BYTES = 64 * 1024;
 
 /** Production services: Supabase (service role, server-side only) + Upstash Redis. */
 export function liveServices(env: Env): Services {
@@ -123,6 +134,7 @@ export function liveServices(env: Env): Services {
     return value;
   }
 
+  const configByIdCache = new Map<string, Awaited<ReturnType<Persistence['configById']>>>();
   const must = <T>(r: { data: T | null; error: { message: string } | null }, what: string): T => {
     if (r.error) throw new Error(`${what}: ${r.error.message}`);
     return r.data as T;
@@ -300,6 +312,153 @@ export function liveServices(env: Env): Services {
         );
     },
     chatEnabled: () => settingOn('survival_chat_enabled'),
+
+    async loadRun(runId) {
+      const { data } = await supabase
+        .from('survival_runs')
+        .select(
+          'id, host_id, mode, difficulty, config_version_id, seed, status, current_day, survival_run_members (user_id, role, status)',
+        )
+        .eq('id', runId)
+        .maybeSingle();
+      if (!data) return null;
+      const d = data as Record<string, unknown> & {
+        survival_run_members: { user_id: string; role: string; status: string }[];
+      };
+      return {
+        id: String(d.id),
+        hostId: String(d.host_id),
+        mode: d.mode as RunRow['mode'],
+        difficulty: d.difficulty as RunRow['difficulty'],
+        configVersionId: String(d.config_version_id),
+        seed: Number(d.seed),
+        status: String(d.status),
+        currentDay: Number(d.current_day),
+        members: d.survival_run_members.map((m) => ({
+          userId: m.user_id,
+          role: m.role,
+          status: m.status,
+        })),
+      };
+    },
+    async configById(id) {
+      const hit = configByIdCache.get(id);
+      if (hit) return hit;
+      const row = must(
+        await supabase
+          .from('survival_config_versions')
+          .select('id, version, config')
+          .eq('id', id)
+          .single(),
+        'configById',
+      ) as unknown as { id: string; version: number; config: unknown };
+      const value = {
+        id: row.id,
+        version: row.version,
+        config: survivalConfigSchema.parse(row.config),
+      };
+      configByIdCache.set(id, value);
+      return value;
+    },
+    async saveSnapshot(runId, day, minute, state) {
+      const json = JSON.stringify(state);
+      const bytes = strToU8(json);
+      const big = bytes.length > SNAPSHOT_GZIP_BYTES;
+      must(
+        await supabase.from('survival_snapshots').insert({
+          run_id: runId,
+          day,
+          time_of_day: Math.floor(minute),
+          state: big ? null : state,
+          state_gz: big ? `\\x${Buffer.from(gzipSync(bytes)).toString('hex')}` : null,
+          byte_size: bytes.length,
+        }),
+        'saveSnapshot',
+      );
+      return bytes.length;
+    },
+    async latestSnapshot(runId) {
+      const { data } = await supabase
+        .from('survival_snapshots')
+        .select('state, state_gz')
+        .eq('run_id', runId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!data) return null;
+      if (data.state) return data.state;
+      const hex = String(data.state_gz ?? '').replace(/^\\x/, '');
+      return JSON.parse(strFromU8(gunzipSync(new Uint8Array(Buffer.from(hex, 'hex')))));
+    },
+    async updateRunProgress(runId, p) {
+      must(
+        await supabase
+          .from('survival_runs')
+          .update({
+            current_day: Math.min(31, Math.max(1, p.currentDay)),
+            boat_stage: p.boatStage,
+            flags: p.flags,
+          })
+          .eq('id', runId),
+        'updateRunProgress',
+      );
+    },
+    async finishRun(runId, payload) {
+      const r = must(
+        await supabase.rpc('finish_survival_run', { p_run_id: runId, p_result: payload }),
+        'finishRun',
+      ) as {
+        rewards?: Record<string, string[]>;
+        achievements?: Record<string, string[]>;
+      };
+      return { rewards: r?.rewards ?? {}, achievements: r?.achievements ?? {} };
+    },
+    async notifyResumed(runId, by, day, code) {
+      must(
+        await supabase.rpc('notify_survival_resumed', {
+          p_run_id: runId,
+          p_by: by,
+          p_day: day,
+          p_code: code,
+        }),
+        'notifyResumed',
+      );
+    },
+    async activeRunCount(userId) {
+      const { count } = await supabase
+        .from('survival_run_members')
+        .select('run_id, survival_runs!inner(status)', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .in('survival_runs.status', ['lobby', 'active']);
+      return count ?? 0;
+    },
+    async setMemberStatus(runId, userId, status) {
+      must(
+        await supabase
+          .from('survival_run_members')
+          .update({ status, left_at: status === 'left' ? new Date().toISOString() : null })
+          .eq('run_id', runId)
+          .eq('user_id', userId),
+        'setMemberStatus',
+      );
+    },
+    async setHost(runId, userId) {
+      must(
+        await supabase.from('survival_runs').update({ host_id: userId }).eq('id', runId),
+        'setHost',
+      );
+    },
+    async endOpenSessions(runId, reason) {
+      must(
+        await supabase
+          .from('survival_sessions')
+          .update({ ended_at: new Date().toISOString(), end_reason: reason.slice(0, 60) })
+          .eq('run_id', runId)
+          .is('ended_at', null),
+        'endOpenSessions',
+      );
+    },
   };
 
   const redis =
@@ -369,5 +528,18 @@ export function liveServices(env: Env): Services {
       }
     : memoryModeration();
 
-  return { verifyToken, checkEligibility, currentConfig, codes, limiter, db, moderation };
+  const liveRuns: LiveRuns = redis
+    ? {
+        async set(runId, roomId, ttlSec) {
+          await redis.set(`survival:run:${runId}`, roomId, { ex: ttlSec });
+        },
+        get: (runId) => redis.get<string>(`survival:run:${runId}`),
+        async del(runId, roomId) {
+          if ((await redis.get<string>(`survival:run:${runId}`)) === roomId)
+            await redis.del(`survival:run:${runId}`);
+        },
+      }
+    : memoryLiveRuns();
+
+  return { verifyToken, checkEligibility, currentConfig, codes, limiter, db, moderation, liveRuns };
 }

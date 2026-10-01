@@ -16,6 +16,8 @@ import { errInfo, log } from '../log.ts';
 import { originAllowed } from '../policy.ts';
 import { services, type PlayerProfile } from '../services/index.ts';
 import { Simulation } from '../sim/simulation.ts';
+import { applySnapshot, type Snapshot } from '../sim/snapshot.ts';
+import { finishLeave, finishPayload, saveRun } from './persistence.ts';
 import { ChatHandler } from './chat-handler.ts';
 import { AuthCode, RoomCode } from './errors.ts';
 import { BoatState, CampState, PlayerState, SurvivalState } from './state.ts';
@@ -35,6 +37,8 @@ const EMOTE_INTERVAL_SEC = 2;
 const PING_RANGE_M = 80;
 const PING_TTL_MS = 10_000;
 const VOTE_SEC = 30;
+/** runId → roomId key lifetime (refreshed by housekeeping every 30 s). */
+const RUN_KEY_TTL_SEC = 120;
 
 const createOptions = z.object({
   protocol: z.number().int(),
@@ -42,6 +46,8 @@ const createOptions = z.object({
   difficulty: z.enum(DIFFICULTIES),
 });
 const joinOptions = z.object({ protocol: z.number().int() }).loose();
+/** Server-internal only (matchMaker.createRoom from the /internal resume endpoint). */
+const resumeOptions = z.object({ __resume: z.object({ runId: z.uuid(), by: z.uuid() }) }).strict();
 
 export interface AuthData {
   profile: PlayerProfile;
@@ -107,6 +113,9 @@ export class SurvivalRoom extends Room<{
   private votes = new Map<string, boolean>();
   private voteTimer: { clear(): void } | null = null;
   private kicksThisSession = 0;
+  private resumed = false;
+  private restAtDawn = false;
+  private saving: Promise<boolean> | null = null;
 
   /** Runs at matchmaking time, BEFORE a room is created or a seat is reserved. */
   static async onAuth(token: string, options: unknown, context: AuthContext): Promise<AuthData> {
@@ -114,6 +123,9 @@ export class SurvivalRoom extends Room<{
       throw new ServerError(AuthCode.BAD_ORIGIN, 'origin_not_allowed');
     const opts = joinOptions.safeParse(options);
     if (!opts.success) throw new ServerError(AuthCode.BAD_OPTIONS, 'bad_options');
+    // Internal-only options can never come from a client.
+    if (Object.keys(options as object).some((k) => k.startsWith('__')))
+      throw new ServerError(AuthCode.BAD_OPTIONS, 'bad_options');
     if (opts.data.protocol !== SURVIVAL_PROTOCOL_VERSION)
       throw new ServerError(AuthCode.OUTDATED_CLIENT, 'outdated_client');
     if (!token) throw new ServerError(AuthCode.UNAUTHORIZED, 'unauthorized');
@@ -122,6 +134,8 @@ export class SurvivalRoom extends Room<{
     const id = await s.verifyToken(token);
     if (!id) throw new ServerError(AuthCode.UNAUTHORIZED, 'unauthorized');
     const creating = 'mode' in (options as object);
+    if (creating && !createOptions.strict().safeParse(options).success)
+      throw new ServerError(AuthCode.BAD_OPTIONS, 'bad_options');
     if (!(await s.limiter.check(creating ? 'room_create' : 'room_join', id.userId)))
       throw new ServerError(AuthCode.RATE_LIMITED, 'rate_limited');
     const el = await s.checkEligibility(id.userId);
@@ -130,10 +144,19 @@ export class SurvivalRoom extends Room<{
         el.reason === 'survival_disabled' ? AuthCode.SURVIVAL_DISABLED : AuthCode.NOT_ELIGIBLE,
         el.reason,
       );
+    if (creating) {
+      // Section 16.6: max active runs per player.
+      const max = (await s.currentConfig()).config.session.maxActiveRuns;
+      if ((await s.db.activeRunCount(id.userId)) >= max)
+        throw new ServerError(AuthCode.TOO_MANY_RUNS, 'too_many_runs');
+    }
     return { profile: el.profile, exp: id.exp };
   }
 
   async onCreate(options: unknown) {
+    const resume = resumeOptions.safeParse(options);
+    if (resume.success)
+      return this.createResumed(resume.data.__resume.runId, resume.data.__resume.by);
     const opts = createOptions.safeParse(options);
     if (!opts.success) throw new ServerError(AuthCode.BAD_OPTIONS, 'bad_options');
     const { config, id, version } = await services().currentConfig();
@@ -159,7 +182,12 @@ export class SurvivalRoom extends Room<{
     // Never listed publicly — joining is by code (or the host's invite link) only.
     await this.setPrivate(true);
     await this.syncMetadata();
+    this.commonSetup(config);
+    log.info('room created', { roomId: this.roomId, mode: st.mode, difficulty: st.difficulty });
+  }
 
+  /** Chat, message handlers and timers shared by new and resumed sessions. */
+  private commonSetup(config: SurvivalConfig) {
     this.chat = new ChatHandler(config.chat, {
       runId: () => this.runId,
       sessionId: () => this.sessionId,
@@ -176,13 +204,94 @@ export class SurvivalRoom extends Room<{
     this.clock.setInterval(() => void this.housekeeping(), 30_000);
     this.clock.setInterval(() => void this.recheckEligibility(), ELIGIBILITY_RECHECK_MS);
     this.clock.setInterval(() => void this.flushLearning(), LEARNING_FLUSH_MS);
-    log.info('room created', { roomId: this.roomId, mode: st.mode, difficulty: st.difficulty });
+  }
+
+  /**
+   * Resume (Section 16.6): a new session from the run's latest snapshot with its PINNED config.
+   * Members join any time; the others get an in-app notice (+ push) with the join code.
+   */
+  private async createResumed(runId: string, by: string) {
+    const s = services();
+    const run = await s.db.loadRun(runId);
+    if (!run || run.status !== 'active')
+      throw new ServerError(AuthCode.RUN_NOT_ACTIVE, 'run_not_active');
+    const members = run.members.filter((m) => m.status === 'active');
+    if (!members.some((m) => m.userId === by))
+      throw new ServerError(AuthCode.NOT_ELIGIBLE, 'not_member');
+    const { config, id, version } = await s.db.configById(run.configVersionId);
+    this.config = config;
+    this.configId = id;
+    this.runId = run.id;
+    this.resumed = true;
+    this.runReady = Promise.resolve();
+    this.maxClients = members.length;
+
+    const sim = new Simulation({
+      config,
+      difficulty: run.difficulty,
+      seed: run.seed,
+      solo: run.mode === 'solo',
+      players: members.map((m) => ({ userId: m.userId, username: '', role: m.role })),
+    });
+    const snap = (await s.db.latestSnapshot(run.id)) as Snapshot | null;
+    if (snap) applySnapshot(sim, snap);
+    else for (const p of sim.players.values()) sim.setConnected(p.userId, false);
+    // Players who left the run since that save are not part of this session.
+    for (const uid of [...sim.players.keys()])
+      if (!members.some((m) => m.userId === uid)) sim.players.delete(uid);
+    sim.drainOut();
+    this.sim = sim;
+
+    const st = this.state;
+    st.mode = run.mode;
+    st.difficulty = run.difficulty;
+    st.maxPlayers = members.length;
+    st.minPlayers = 1;
+    st.configVersion = version;
+    st.protocol = SURVIVAL_PROTOCOL_VERSION;
+    st.camp = new CampState();
+    st.boat = new BoatState();
+    members.forEach((m, i) => {
+      const p = new PlayerState();
+      p.userId = m.userId;
+      p.username = sim.players.get(m.userId)?.username ?? '';
+      p.role = m.role;
+      p.connected = false;
+      p.joinedAt = i;
+      p.isHost = m.userId === by;
+      st.players.set(m.userId, p);
+    });
+    st.hostId = by;
+    const code = await s.codes.reserve(this.roomId, CODE_TTL_SEC);
+    st.code = code ?? '';
+    await this.setPrivate(true);
+
+    await s.db.endOpenSessions(run.id, 'stale');
+    this.sessionId = await s.db.createSession(run.id, this.roomId);
+    await s.liveRuns.set(run.id, this.roomId, RUN_KEY_TTL_SEC);
+    this.commonSetup(config);
+    syncWorld(st, sim, true);
+    st.phase = 'playing';
+    this.startSimulation();
+    await this.syncMetadata();
+    try {
+      await s.db.notifyResumed(run.id, by, sim.clock.day, st.code);
+    } catch (e) {
+      log.warn('resume notice failed', { runId: run.id, ...errInfo(e) });
+    }
+    log.info('run resumed', {
+      roomId: this.roomId,
+      runId: run.id,
+      day: sim.clock.day,
+      snapshot: !!snap,
+    });
   }
 
   async onJoin(client: SurvivalClient) {
     const auth = client.auth!;
     const { userId } = auth.profile;
     if (this.kicked.has(userId)) throw new ServerError(RoomCode.KICKED, 'kicked');
+    if (this.state.phase === 'playing' || this.state.phase === 'ended') return this.rejoin(client);
     if (this.state.phase !== 'lobby')
       throw new ServerError(RoomCode.ALREADY_STARTED, 'already_started');
     if (this.state.players.has(userId))
@@ -209,6 +318,31 @@ export class SurvivalRoom extends Room<{
     if (p.isHost && !this.runReady) this.runReady = this.createRun(userId);
     await this.chat.loadRelations([...this.state.players.keys()]);
     client.send('chat:history', { lines: this.chat.historyFor(auth.profile) });
+  }
+
+  /** A run member (re)joining a session in progress (Section 16.5: no late joiners). */
+  private async rejoin(client: SurvivalClient) {
+    const { userId, username } = client.auth!.profile;
+    const sp = this.sim?.players.get(userId);
+    const ps = this.state.players.get(userId);
+    if (!sp || !ps) throw new ServerError(RoomCode.NOT_MEMBER, 'not_member');
+    if (ps.connected && this.clientOf(userId) !== client)
+      throw new ServerError(RoomCode.DUPLICATE_SESSION, 'duplicate_session');
+    sp.username = username;
+    ps.username = username;
+    ps.avatar = JSON.stringify(pickAvatar(client.auth!.profile.avatar));
+    ps.connected = true;
+    this.sim!.setConnected(userId, true);
+    this.sim!.dirty.bags.add(userId);
+    if (!this.state.players.get(this.state.hostId)?.connected) {
+      for (const p of this.state.players.values()) p.isHost = p.userId === userId;
+      this.state.hostId = userId;
+    }
+    this.attachView(client);
+    this.flush();
+    await this.chat.loadRelations([...this.state.players.keys()]);
+    client.send('chat:history', { lines: this.chat.historyFor(client.auth!.profile) });
+    log.info('player rejoined', { roomId: this.roomId, userId });
   }
 
   async onDrop(client: SurvivalClient) {
@@ -251,6 +385,13 @@ export class SurvivalRoom extends Room<{
   async onDispose() {
     await this.releaseCode();
     await this.flushLearning();
+    // Everyone left / room closing: save immediately (Section 16.5).
+    if (this.sim && this.state.phase === 'playing' && !this.sim.obj.result)
+      await this.save('close');
+    if (this.runId)
+      await services()
+        .liveRuns.del(this.runId, this.roomId)
+        .catch(() => {});
     try {
       await this.runReady;
       const s = services().db;
@@ -268,9 +409,43 @@ export class SurvivalRoom extends Room<{
     log.info('room disposed', { roomId: this.roomId });
   }
 
-  onBeforeShutdown() {
-    // Phase 7 saves a snapshot here before closing.
-    void this.disconnect(RoomCode.SERVER_SHUTDOWN);
+  /** Graceful SIGTERM (deploys/restarts): save first, then close. Clients can resume. */
+  async onBeforeShutdown() {
+    if (this.sim && this.state.phase === 'playing' && !this.sim.obj.result)
+      await this.save('shutdown');
+    this.broadcast('toast', { key: 'server_restarting' });
+    await this.disconnect(RoomCode.SERVER_SHUTDOWN);
+  }
+
+  /** One save at a time; the latest call wins if one is in flight. */
+  private async save(reason: string) {
+    if (!this.sim || !this.runId) return false;
+    if (this.saving) await this.saving;
+    this.saving = saveRun(this.runId, this.sim, reason);
+    try {
+      return await this.saving;
+    } finally {
+      this.saving = null;
+    }
+  }
+
+  /** "Umalis sa Team" during a live session (called via remoteRoomCall from /internal). */
+  async leaveRun(userId: string) {
+    const sim = this.sim;
+    const p = sim?.players.get(userId);
+    if (!sim || !p || !this.runId) return { ok: false };
+    for (const s of p.bag) if (s) sim.storage.set(s.item, (sim.storage.get(s.item) ?? 0) + s.qty);
+    sim.dirty.storage = true;
+    sim.players.delete(userId);
+    this.state.players.delete(userId);
+    this.clientOf(userId)?.leave(RoomCode.LEFT_RUN);
+    const run = await services().db.loadRun(this.runId);
+    if (run) await finishLeave(this.runId, userId, run.hostId, run.members);
+    if (this.state.hostId === userId) this.transferHost();
+    this.flush();
+    if (sim.players.size === 0) await this.disconnect(RoomCode.RUN_ABANDONED);
+    else await this.save('member_left');
+    return { ok: true };
   }
 
   // ── Messages ──────────────────────────────────────────────────────────────
@@ -440,6 +615,7 @@ export class SurvivalRoom extends Room<{
     await this.syncMetadata();
     await this.runReady;
     const players = [...this.state.players.values()].sort((a, b) => a.joinedAt - b.joinedAt);
+    if (this.runId) await services().liveRuns.set(this.runId, this.roomId, RUN_KEY_TTL_SEC);
     this.sim = new Simulation({
       config: this.config,
       difficulty: this.state.difficulty as Difficulty,
@@ -475,27 +651,51 @@ export class SurvivalRoom extends Room<{
     if (this.state.phase !== 'cutscene' || !this.sim) return;
     this.state.phase = 'playing';
     void this.syncMetadata();
+    this.startSimulation();
+    void this.save('start');
+  }
+
+  private startSimulation() {
+    // Members who drop out can come back to the same session (onJoin checks membership).
+    void this.unlock();
     this.setSimulationInterval((dtMs) => {
       if (!this.sim) return;
       // Clamp: a stalled event loop must not fast-forward stats in one giant step.
       this.sim.tick(Math.min(dtMs, 250) / 1000);
       this.flush();
     }, TICK_MS);
+    // Emergency save every N real seconds (plus dawn, close and shutdown).
+    this.clock.setInterval(() => {
+      if (this.state.phase === 'playing' && !this.sim?.obj.result) void this.save('interval');
+    }, this.config.session.autoSaveEverySec * 1000);
   }
 
   /** Delivers queued simulation messages and mirrors state. */
   private flush() {
     const sim = this.sim;
     if (!sim) return;
+    let dawn = false;
     for (const o of sim.drainOut()) {
       if (o.to === 'all') this.broadcast(o.type, o.payload);
       else this.clientOf(o.to)?.send(o.type, o.payload);
+      if (o.type === 'event' && o.payload.kind === 'dawn') dawn = true;
     }
+    if (dawn && !sim.obj.result) void this.onDawn();
     syncWorld(this.state, sim);
     if (sim.obj.result && this.state.phase === 'playing') void this.onRunEnded();
   }
 
-  /** Ending reached: results stay on screen (chat still works); Phase 7 persists them. */
+  /** Auto-save at every dawn; a passed "Pahinga" vote ends the session here. */
+  private async onDawn() {
+    await this.save('dawn');
+    if (this.restAtDawn) {
+      this.restAtDawn = false;
+      this.broadcast('event', { kind: 'rest_ended_session' });
+      await this.disconnect(RoomCode.RESTED);
+    }
+  }
+
+  /** Ending reached: results stay on screen (chat still works). */
   private async onRunEnded() {
     this.state.phase = 'ended';
     void this.syncMetadata();
@@ -507,15 +707,21 @@ export class SurvivalRoom extends Room<{
       score: r.score,
     });
     await this.flushLearning();
-    if (this.runId)
-      try {
-        await services().db.setRunStatus(
-          this.runId,
-          r.ending === 'failed' ? 'failed' : 'completed',
-        );
-      } catch (e) {
-        log.error('run end persistence failed', { roomId: this.roomId, ...errInfo(e) });
+    if (!this.runId) return;
+    try {
+      const out = await services().db.finishRun(this.runId, finishPayload(this.sim!));
+      for (const c of this.clients) {
+        const uid = c.auth?.profile.userId;
+        if (!uid) continue;
+        const rewards = out.rewards[uid] ?? [];
+        const achievements = out.achievements[uid] ?? [];
+        if (rewards.length || achievements.length)
+          c.send('rewardUnlocked', { rewards, achievements });
       }
+      await services().liveRuns.del(this.runId, this.roomId);
+    } catch (e) {
+      log.error('run end persistence failed', { roomId: this.roomId, ...errInfo(e) });
+    }
   }
 
   // ── Team votes (Section 17.5 vote-kick; abandon) ────────────────────────────
@@ -524,7 +730,15 @@ export class SurvivalRoom extends Room<{
     if (this.state.phase !== 'playing' || this.state.mode === 'solo') return;
     const st = this.state;
     if (!st.voteType) {
-      if (!m.value || m.type === 'rest') return; // rest votes arrive with saving (Phase 7)
+      if (!m.value) return;
+      if (
+        m.type === 'rest' &&
+        [...this.state.players.values()].some((p) => p.connected && !this.sim?.atCamp(p))
+      )
+        return this.clientOf(uid)?.send('vote:denied', {
+          type: 'rest',
+          reason: 'everyone_at_camp',
+        });
       if (
         m.type === 'kick' &&
         (!m.targetUserId || m.targetUserId === uid || !st.players.has(m.targetUserId))
@@ -568,6 +782,10 @@ export class SurvivalRoom extends Room<{
       this.clientOf(target)?.leave(RoomCode.KICKED);
       this.kicksThisSession += 1;
       if (this.kicksThisSession >= 2) this.sim?.flags.add('frequent_kicks');
+    } else if (type === 'rest') {
+      // "Pahinga": save and end the session at the next dawn (Section 6.3).
+      this.restAtDawn = true;
+      this.broadcast('event', { kind: 'rest_scheduled' });
     } else if (type === 'abandon') {
       void (async () => {
         if (this.runId)
@@ -639,6 +857,10 @@ export class SurvivalRoom extends Room<{
   }
 
   private async housekeeping() {
+    if (this.runId && this.state.phase === 'playing')
+      await services()
+        .liveRuns.set(this.runId, this.roomId, RUN_KEY_TTL_SEC)
+        .catch(() => {});
     if (this.state.phase !== 'lobby') return;
     const idleMs = this.config.session.lobbyIdleMin * 60_000;
     if (Date.now() - this.lastActivity > idleMs) {

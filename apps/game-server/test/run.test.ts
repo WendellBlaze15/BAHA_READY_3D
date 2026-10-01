@@ -36,6 +36,7 @@ afterEach(async () => {
   svc.moderation = memoryModeration();
   svc.store.chatOn = true;
   svc.store.mutes.clear();
+  svc.store.runs.clear();
   await colyseus.cleanup();
 });
 

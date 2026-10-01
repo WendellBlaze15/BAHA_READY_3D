@@ -127,10 +127,12 @@ export class Simulation {
   readonly items: ItemIndex;
   readonly solo: boolean;
   readonly seed: number;
-  readonly rng: StateRng;
+  rng: StateRng;
 
   /** Simulation seconds since start (drives cooldowns, holds and throttles). */
   time = 0;
+  /** Real seconds of unpaused play across all sessions (results). */
+  playedSec = 0;
   clock: Clock;
   dayPhase: DayPhase;
   weather: Weather = 'clear';
@@ -164,10 +166,10 @@ export class Simulation {
   };
 
   private statAcc = 0;
-  private dropSeq = 0;
+  dropSeq = 0;
   private offerSeq = 0;
   private offers = new Map<string, GiveOffer>();
-  private lastHour = -1;
+  lastHour = -1;
 
   constructor(o: SimOptions) {
     this.cfg = o.config;
@@ -271,6 +273,7 @@ export class Simulation {
     this.completeChannels();
     this.expireOffers();
     if (this.paused) return;
+    this.playedSec += dt;
     this.obj.tick(dt);
 
     this.statAcc += dt;

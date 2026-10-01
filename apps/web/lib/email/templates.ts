@@ -80,4 +80,8 @@ export const BREVO_TEMPLATES = {
     id: 20,
     critical: true,
   },
+  survival_run_expiring: {
+    id: 21,
+    critical: false,
+  },
 } as const;

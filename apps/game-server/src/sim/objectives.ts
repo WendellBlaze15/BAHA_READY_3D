@@ -100,7 +100,7 @@ export class Objectives {
   /** Dirty flags for the sync layer. */
   dirty = { boat: true, npcs: true, crates: true, heli: true };
 
-  private lastHourKey = -1;
+  lastHourKey = -1;
   private collapseAt: { id: string; at: number } | null = null;
 
   constructor(private sim: Simulation) {

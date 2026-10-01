@@ -12,6 +12,8 @@ export const AuthCode = {
   SURVIVAL_DISABLED: 423,
   RATE_LIMITED: 429,
   UNAVAILABLE: 503,
+  TOO_MANY_RUNS: 409,
+  RUN_NOT_ACTIVE: 410,
 } as const;
 
 /**
@@ -26,5 +28,8 @@ export const RoomCode = {
   ALREADY_STARTED: 4106,
   DUPLICATE_SESSION: 4109,
   RUN_ABANDONED: 4110,
+  RESTED: 4111,
+  LEFT_RUN: 4112,
+  NOT_MEMBER: 4113,
   SERVER_SHUTDOWN: 4199,
 } as const;

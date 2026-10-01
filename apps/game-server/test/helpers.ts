@@ -7,6 +7,7 @@ import {
 import {
   memoryCodeStore,
   memoryLimiter,
+  memoryLiveRuns,
   memoryModeration,
   memoryPersistence,
 } from '../src/services/memory.ts';
@@ -50,11 +51,13 @@ export function fakeServices(): FakeServices {
   let disabled = false;
   const config = survivalConfigSchema.parse(DEFAULT_SURVIVAL_CONFIG);
   const { db, store } = memoryPersistence();
+  store.configs.set('cfg-1', { id: 'cfg-1', version: 1, config });
   return {
     eligible,
     store,
     db,
     moderation: memoryModeration(),
+    liveRuns: memoryLiveRuns(),
     setDisabled: (on) => {
       disabled = on;
     },

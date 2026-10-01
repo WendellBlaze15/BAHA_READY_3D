@@ -175,8 +175,36 @@ async function main() {
   const left = new Promise<number>((r) => guest.onLeave((c) => r(c)));
   await fetch(`${base}/admin/rooms/${host.roomId}/close`, { method: 'POST', headers: auth });
   check('admin force-close disconnects players', (await left) === 4104);
-  await new Promise((r) => setTimeout(r, 500));
+  await new Promise((r) => setTimeout(r, 1500));
   check('code released at start', (await redis.get(`survival:code:${code}`)) === null);
+
+  // Persistence: the closed session saved a snapshot; resuming restores the run.
+  const { count: snaps } = await admin
+    .from('survival_snapshots')
+    .select('*', { count: 'exact', head: true })
+    .eq('run_id', runId ?? '');
+  check('snapshots saved (start + close)', (snaps ?? 0) >= 2, snaps);
+  const res = await fetch(`${base}/internal/runs/${runId}/resume`, {
+    method: 'POST',
+    headers: { ...auth, 'content-type': 'application/json' },
+    body: JSON.stringify({ userId: p1.id }),
+  });
+  const resumed = (await res.json()) as { roomId?: string };
+  check('resume creates a session room', res.ok && !!resumed.roomId, resumed);
+  const back = await sdk(p1.token).joinById(resumed.roomId!, {
+    protocol: SURVIVAL_PROTOCOL_VERSION,
+  });
+  back.onMessage('*', () => {});
+  await new Promise((r) => setTimeout(r, 800));
+  const st2 = back.state as { phase: string; day: number };
+  check('resumed run is playing from the save', st2.phase === 'playing' && st2.day >= 1, st2);
+  const { data: notes } = await admin
+    .from('notifications')
+    .select('type')
+    .eq('user_id', p2.id)
+    .eq('type', 'survival_resumed');
+  check('teammate notified about the resume', (notes?.length ?? 0) === 1);
+  await back.leave(true);
 }
 
 try {

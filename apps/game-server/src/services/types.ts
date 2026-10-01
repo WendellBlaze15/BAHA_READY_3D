@@ -34,7 +34,15 @@ export interface CodeStore {
   release(code: string): Promise<void>;
 }
 
-export type LimitAction = 'room_create' | 'room_join' | 'code_lookup' | 'report' | 'mute';
+/** runId → live roomId (one live session per run, across instances). */
+export interface LiveRuns {
+  set(runId: string, roomId: string, ttlSec: number): Promise<void>;
+  get(runId: string): Promise<string | null>;
+  del(runId: string, roomId: string): Promise<void>;
+}
+
+export type LimitAction =
+  'room_create' | 'room_join' | 'code_lookup' | 'report' | 'mute' | 'resume';
 
 export interface RateLimiter {
   /** true = allowed. */
@@ -95,6 +103,41 @@ export interface Persistence {
   setMute(muterId: string, mutedId: string, on: boolean): Promise<void>;
   /** survival_chat_enabled (cached). */
   chatEnabled(): Promise<boolean>;
+
+  // ── Phase 7: runs, snapshots, results ──
+  loadRun(runId: string): Promise<RunRow | null>;
+  /** The run's pinned config version (never "current" — a run keeps its rules). */
+  configById(id: string): Promise<{ id: string; version: number; config: SurvivalConfig }>;
+  saveSnapshot(runId: string, day: number, minute: number, state: unknown): Promise<number>;
+  latestSnapshot(runId: string): Promise<unknown | null>;
+  updateRunProgress(
+    runId: string,
+    p: { currentDay: number; boatStage: number; flags: string[] },
+  ): Promise<void>;
+  finishRun(runId: string, payload: Record<string, unknown>): Promise<FinishResult>;
+  notifyResumed(runId: string, byUserId: string, day: number, code: string): Promise<void>;
+  /** Runs (lobby/active) this player is an active member of. */
+  activeRunCount(userId: string): Promise<number>;
+  setMemberStatus(runId: string, userId: string, status: 'active' | 'left'): Promise<void>;
+  setHost(runId: string, userId: string): Promise<void>;
+  endOpenSessions(runId: string, reason: string): Promise<void>;
+}
+
+export interface RunRow {
+  id: string;
+  hostId: string;
+  mode: 'solo' | 'coop';
+  difficulty: 'easy' | 'normal' | 'hard';
+  configVersionId: string;
+  seed: number;
+  status: string;
+  currentDay: number;
+  members: { userId: string; role: string; status: string }[];
+}
+
+export interface FinishResult {
+  rewards: Record<string, string[]>;
+  achievements: Record<string, string[]>;
 }
 
 /** Cross-room auto-mute state (escalation window 24 h). */
@@ -115,4 +158,5 @@ export interface Services {
   limiter: RateLimiter;
   db: Persistence;
   moderation: ChatModeration;
+  liveRuns: LiveRuns;
 }

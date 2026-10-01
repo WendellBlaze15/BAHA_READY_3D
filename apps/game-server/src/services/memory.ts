@@ -6,6 +6,7 @@ import type {
   CodeStore,
   LearningRow,
   LimitAction,
+  LiveRuns,
   Persistence,
   RateLimiter,
   ReportRow,
@@ -18,6 +19,7 @@ export const LIMITS: Record<LimitAction, { limit: number; window: Duration }> = 
   code_lookup: { limit: 20, window: '5 m' },
   report: { limit: 10, window: '1 d' },
   mute: { limit: 60, window: '1 d' },
+  resume: { limit: 10, window: '10 m' },
 };
 
 /** Single-instance code store (local dev without Upstash, and tests). */
@@ -72,6 +74,19 @@ export function memoryLimiter(): RateLimiter {
   };
 }
 
+export function memoryLiveRuns(): LiveRuns {
+  const m = new Map<string, string>();
+  return {
+    set: async (runId, roomId) => {
+      m.set(runId, roomId);
+    },
+    get: async (runId) => m.get(runId) ?? null,
+    del: async (runId, roomId) => {
+      if (m.get(runId) === roomId) m.delete(runId);
+    },
+  };
+}
+
 export function memoryModeration(): ChatModeration {
   const until = new Map<string, number>();
   const counts = new Map<string, { n: number; since: number }>();
@@ -103,11 +118,36 @@ export function memoryPersistence() {
     mutes: new Set<string>(),
     blocks: new Set<string>(),
     chatOn: true,
+    snapshots: new Map<string, unknown[]>(),
+    finished: new Map<string, Record<string, unknown>>(),
+    notices: [] as { runId: string; by: string; day: number; code: string }[],
+    configs: new Map<
+      string,
+      { id: string; version: number; config: import('@baha/shared/survival').SurvivalConfig }
+    >(),
+    progress: new Map<string, { currentDay: number; boatStage: number; flags: string[] }>(),
+    runMeta: new Map<
+      string,
+      {
+        hostId: string;
+        mode: 'solo' | 'coop';
+        difficulty: 'easy' | 'normal' | 'hard';
+        configVersionId: string;
+        seed: number;
+      }
+    >(),
   };
   const db: Persistence = {
-    async createRun() {
+    async createRun(run) {
       const id = `00000000-0000-4000-8000-${String(++seq).padStart(12, '0')}`;
       store.runs.set(id, { status: 'lobby', members: [] });
+      store.runMeta.set(id, {
+        hostId: run.hostId,
+        mode: run.mode,
+        difficulty: run.difficulty as 'easy' | 'normal' | 'hard',
+        configVersionId: run.configVersionId,
+        seed: run.seed,
+      });
       return id;
     },
     async setRunStatus(runId, status) {
@@ -156,6 +196,67 @@ export function memoryPersistence() {
       else store.mutes.delete(`${a}>${b}`);
     },
     chatEnabled: async () => store.chatOn,
+    async loadRun(runId) {
+      const r = store.runs.get(runId);
+      const m = store.runMeta.get(runId);
+      if (!r || !m) return null;
+      const p = store.progress.get(runId);
+      return {
+        id: runId,
+        ...m,
+        status: r.status,
+        currentDay: p?.currentDay ?? 1,
+        members: r.members.map((x) => ({
+          ...x,
+          status: (x as { status?: string }).status ?? 'active',
+        })),
+      };
+    },
+    async configById(id) {
+      const c = store.configs.get(id);
+      if (!c) throw new Error('config not found');
+      return c;
+    },
+    async saveSnapshot(runId, _day, _minute, state) {
+      const json = JSON.stringify(state);
+      const list = store.snapshots.get(runId) ?? [];
+      list.push(JSON.parse(json));
+      store.snapshots.set(runId, list.slice(-5));
+      return json.length;
+    },
+    latestSnapshot: async (runId) => store.snapshots.get(runId)?.at(-1) ?? null,
+    async updateRunProgress(runId, p) {
+      store.progress.set(runId, p);
+    },
+    async finishRun(runId, payload) {
+      if (!store.finished.has(runId)) store.finished.set(runId, payload);
+      const r = store.runs.get(runId);
+      if (r) r.status = payload.ending === 'failed' ? 'failed' : 'completed';
+      return { rewards: {}, achievements: {} };
+    },
+    async notifyResumed(runId, by, day, code) {
+      store.notices.push({ runId, by, day, code });
+    },
+    activeRunCount: async (userId) =>
+      [...store.runs.values()].filter(
+        (r) =>
+          (r.status === 'lobby' || r.status === 'active') &&
+          r.members.some(
+            (m) => m.userId === userId && (m as { status?: string }).status !== 'left',
+          ),
+      ).length,
+    async setMemberStatus(runId, userId, status) {
+      const m = store.runs.get(runId)?.members.find((x) => x.userId === userId) as
+        { status?: string } | undefined;
+      if (m) m.status = status;
+    },
+    async setHost(runId, userId) {
+      const m = store.runMeta.get(runId);
+      if (m) m.hostId = userId;
+    },
+    async endOpenSessions(runId, reason) {
+      for (const s of store.sessions.values()) if (s.runId === runId && !s.ended) s.ended = reason;
+    },
   };
   return { db, store };
 }
