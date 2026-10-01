@@ -7,6 +7,12 @@ export type AppClaims = {
   permissions?: string[];
   user_status?: 'active' | 'suspended' | 'deleted';
   onboarded?: boolean;
+  /**
+   * Survival Mode eligibility (player role, no staff role, active, not restricted). UI hint only:
+   * the middleware and the game server re-check live. Never use the bare survival.play
+   * permission for this — facilitators keep the player role.
+   */
+  can_play_survival?: boolean;
   session_id?: string;
 };
 

@@ -192,7 +192,9 @@
     "terms2": "Huwag mandaya sa laro. Sinusuri ng server ang bawat resulta at puwedeng i-void ang mga kahina-hinalang score.",
     "terms3": "Maging magalang. Ang mga username na nakakasakit o nagpapanggap na opisyal ay puwedeng palitan o i-suspend.",
     "terms4": "Libre ang Baha Ready 3D. Walang bayad, walang ads, at walang in-app purchases.",
-    "updated": "Huling na-update: Setyembre 2026"
+    "updated": "Huling na-update: Setyembre 2026",
+    "privacySurvivalTitle": "Chat ng team sa Survival Mode",
+    "privacySurvival": "May text chat ang Survival Mode para lang sa magkakasama sa iisang room (walang private message, walang voice). Para sa kaligtasan ng lahat — lalo na ng mga menor de edad — sinasala ang bawat mensahe: tinatakpan ang masasamang salita, at hinaharangan ang mga link, numero ng telepono, email, social media handle, at address. Itinatago ang mga mensahe nang 14 na araw para sa pagsusuri at awtomatikong binubura pagkatapos; ang mga mensaheng kasama sa bukas na report ay itinatago hanggang maresolba ito (hanggang 90 araw). Mababasa lang ng admin ang chat sa pamamagitan ng report, at nire-record ang bawat pagtingin. Puwede mong i-mute o i-block ang ibang manlalaro at i-report ang mensahe anumang oras."
   },
   "pwa": {
     "updateAvailable": "May bagong update ang Baha Ready.",

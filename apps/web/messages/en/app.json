@@ -192,7 +192,9 @@
     "terms2": "Don't cheat. The server checks every result and may void suspicious scores.",
     "terms3": "Be respectful. Offensive usernames or ones that impersonate officials may be changed or suspended.",
     "terms4": "Baha Ready 3D is free. No payments, no ads, and no in-app purchases.",
-    "updated": "Last updated: September 2026"
+    "updated": "Last updated: September 2026",
+    "privacySurvivalTitle": "Survival Mode team chat",
+    "privacySurvival": "Survival Mode has a text chat for teammates in the same room only (no private messages, no voice). To keep everyone — especially minors — safe, every message is filtered: bad words are hidden, and links, phone numbers, emails, social media handles and addresses are blocked. Messages are kept for 14 days for safety reviews and then deleted automatically; messages attached to an open report are kept until the report is resolved (at most 90 days). Admins can read chat only through a report, and every such view is logged. You can mute or block other players and report messages at any time."
   },
   "pwa": {
     "updateAvailable": "A new version of Baha Ready is available.",

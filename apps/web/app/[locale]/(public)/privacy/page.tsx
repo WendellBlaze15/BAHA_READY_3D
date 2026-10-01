@@ -14,6 +14,7 @@ export default async function PrivacyPage({ params }: { params: Promise<{ locale
     ['privacyCollectTitle', 'privacyCollect'],
     ['privacyUseTitle', 'privacyUse'],
     ['privacyMinorsTitle', 'privacyMinors'],
+    ['privacySurvivalTitle', 'privacySurvival'],
     ['privacyRightsTitle', 'privacyRights'],
   ] as const;
   return (

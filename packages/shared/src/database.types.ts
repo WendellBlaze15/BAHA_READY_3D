@@ -193,6 +193,7 @@ export type Database = {
           hazard_hits: number | null;
           id: string;
           idempotency_key: string | null;
+          imported: boolean;
           level_id: number;
           level_version_id: string;
           live_session_id: string | null;
@@ -218,6 +219,7 @@ export type Database = {
           hazard_hits?: number | null;
           id?: string;
           idempotency_key?: string | null;
+          imported?: boolean;
           level_id: number;
           level_version_id: string;
           live_session_id?: string | null;
@@ -243,6 +245,7 @@ export type Database = {
           hazard_hits?: number | null;
           id?: string;
           idempotency_key?: string | null;
+          imported?: boolean;
           level_id?: number;
           level_version_id?: string;
           live_session_id?: string | null;
@@ -339,6 +342,33 @@ export type Database = {
           target_id?: string | null;
           target_type?: string | null;
           user_agent?: string | null;
+        };
+        Relationships: [];
+      };
+      cosmetic_items: {
+        Row: {
+          is_reward: boolean;
+          key: string;
+          name_en: string;
+          name_fil: string;
+          slot: string;
+          unlock_rule: Json;
+        };
+        Insert: {
+          is_reward?: boolean;
+          key: string;
+          name_en: string;
+          name_fil: string;
+          slot: string;
+          unlock_rule: Json;
+        };
+        Update: {
+          is_reward?: boolean;
+          key?: string;
+          name_en?: string;
+          name_fil?: string;
+          slot?: string;
+          unlock_rule?: Json;
         };
         Relationships: [];
       };
@@ -1056,6 +1086,42 @@ export type Database = {
           },
         ];
       };
+      player_cosmetics: {
+        Row: {
+          item_key: string;
+          source: string;
+          unlocked_at: string;
+          user_id: string;
+        };
+        Insert: {
+          item_key: string;
+          source?: string;
+          unlocked_at?: string;
+          user_id: string;
+        };
+        Update: {
+          item_key?: string;
+          source?: string;
+          unlocked_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'player_cosmetics_item_key_fkey';
+            columns: ['item_key'];
+            isOneToOne: false;
+            referencedRelation: 'cosmetic_items';
+            referencedColumns: ['key'];
+          },
+          {
+            foreignKeyName: 'player_cosmetics_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       player_level_progress: {
         Row: {
           attempts_count: number;
@@ -1321,6 +1387,719 @@ export type Database = {
           },
         ];
       };
+      survival_blocks: {
+        Row: {
+          blocked_id: string;
+          blocker_id: string;
+          created_at: string;
+        };
+        Insert: {
+          blocked_id: string;
+          blocker_id: string;
+          created_at?: string;
+        };
+        Update: {
+          blocked_id?: string;
+          blocker_id?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'survival_blocks_blocked_id_fkey';
+            columns: ['blocked_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'survival_blocks_blocker_id_fkey';
+            columns: ['blocker_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      survival_chat_flags: {
+        Row: {
+          auto: boolean;
+          created_at: string;
+          id: string;
+          reason: string;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          run_id: string | null;
+          status: string;
+          user_id: string;
+        };
+        Insert: {
+          auto?: boolean;
+          created_at?: string;
+          id?: string;
+          reason: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          run_id?: string | null;
+          status?: string;
+          user_id: string;
+        };
+        Update: {
+          auto?: boolean;
+          created_at?: string;
+          id?: string;
+          reason?: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          run_id?: string | null;
+          status?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'survival_chat_flags_reviewed_by_fkey';
+            columns: ['reviewed_by'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'survival_chat_flags_run_id_fkey';
+            columns: ['run_id'];
+            isOneToOne: false;
+            referencedRelation: 'survival_runs';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'survival_chat_flags_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      survival_chat_messages: {
+        Row: {
+          body_delivered: string | null;
+          body_original: string;
+          created_at: string;
+          filter_hits: string[];
+          hidden_at: string | null;
+          hidden_by: string | null;
+          id: number;
+          run_id: string;
+          sender_id: string;
+          session_id: string | null;
+          status: string;
+        };
+        Insert: {
+          body_delivered?: string | null;
+          body_original: string;
+          created_at?: string;
+          filter_hits?: string[];
+          hidden_at?: string | null;
+          hidden_by?: string | null;
+          id?: number;
+          run_id: string;
+          sender_id: string;
+          session_id?: string | null;
+          status: string;
+        };
+        Update: {
+          body_delivered?: string | null;
+          body_original?: string;
+          created_at?: string;
+          filter_hits?: string[];
+          hidden_at?: string | null;
+          hidden_by?: string | null;
+          id?: number;
+          run_id?: string;
+          sender_id?: string;
+          session_id?: string | null;
+          status?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'survival_chat_messages_hidden_by_fkey';
+            columns: ['hidden_by'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'survival_chat_messages_run_id_fkey';
+            columns: ['run_id'];
+            isOneToOne: false;
+            referencedRelation: 'survival_runs';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'survival_chat_messages_sender_id_fkey';
+            columns: ['sender_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'survival_chat_messages_session_id_fkey';
+            columns: ['session_id'];
+            isOneToOne: false;
+            referencedRelation: 'survival_sessions';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      survival_config_versions: {
+        Row: {
+          config: Json;
+          id: string;
+          is_current: boolean;
+          notes: string | null;
+          published_at: string;
+          published_by: string | null;
+          version: number;
+        };
+        Insert: {
+          config: Json;
+          id?: string;
+          is_current?: boolean;
+          notes?: string | null;
+          published_at?: string;
+          published_by?: string | null;
+          version: number;
+        };
+        Update: {
+          config?: Json;
+          id?: string;
+          is_current?: boolean;
+          notes?: string | null;
+          published_at?: string;
+          published_by?: string | null;
+          version?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'survival_config_versions_published_by_fkey';
+            columns: ['published_by'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      survival_learning_events: {
+        Row: {
+          created_at: string;
+          day: number;
+          event_key: string;
+          id: number;
+          is_positive: boolean;
+          run_id: string;
+          user_id: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          day: number;
+          event_key: string;
+          id?: number;
+          is_positive: boolean;
+          run_id: string;
+          user_id?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          day?: number;
+          event_key?: string;
+          id?: number;
+          is_positive?: boolean;
+          run_id?: string;
+          user_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'survival_learning_events_run_id_fkey';
+            columns: ['run_id'];
+            isOneToOne: false;
+            referencedRelation: 'survival_runs';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'survival_learning_events_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      survival_mutes: {
+        Row: {
+          created_at: string;
+          muted_id: string;
+          muter_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          muted_id: string;
+          muter_id: string;
+        };
+        Update: {
+          created_at?: string;
+          muted_id?: string;
+          muter_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'survival_mutes_muted_id_fkey';
+            columns: ['muted_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'survival_mutes_muter_id_fkey';
+            columns: ['muter_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      survival_player_stats: {
+        Row: {
+          boat_stages_built: number;
+          full_rescues: number;
+          nights_survived: number;
+          revives_given: number;
+          runs_completed: number;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          boat_stages_built?: number;
+          full_rescues?: number;
+          nights_survived?: number;
+          revives_given?: number;
+          runs_completed?: number;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          boat_stages_built?: number;
+          full_rescues?: number;
+          nights_survived?: number;
+          revives_given?: number;
+          runs_completed?: number;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'survival_player_stats_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: true;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      survival_reports: {
+        Row: {
+          created_at: string;
+          evidence: Json;
+          id: string;
+          message_id: number | null;
+          priority: string;
+          reason: string;
+          reported_id: string;
+          reporter_id: string;
+          review_note: string | null;
+          reviewed_at: string | null;
+          reviewer_id: string | null;
+          run_id: string | null;
+          status: string;
+        };
+        Insert: {
+          created_at?: string;
+          evidence?: Json;
+          id?: string;
+          message_id?: number | null;
+          priority?: string;
+          reason: string;
+          reported_id: string;
+          reporter_id: string;
+          review_note?: string | null;
+          reviewed_at?: string | null;
+          reviewer_id?: string | null;
+          run_id?: string | null;
+          status?: string;
+        };
+        Update: {
+          created_at?: string;
+          evidence?: Json;
+          id?: string;
+          message_id?: number | null;
+          priority?: string;
+          reason?: string;
+          reported_id?: string;
+          reporter_id?: string;
+          review_note?: string | null;
+          reviewed_at?: string | null;
+          reviewer_id?: string | null;
+          run_id?: string | null;
+          status?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'survival_reports_message_id_fkey';
+            columns: ['message_id'];
+            isOneToOne: false;
+            referencedRelation: 'survival_chat_messages';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'survival_reports_reported_id_fkey';
+            columns: ['reported_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'survival_reports_reporter_id_fkey';
+            columns: ['reporter_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'survival_reports_reviewer_id_fkey';
+            columns: ['reviewer_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'survival_reports_run_id_fkey';
+            columns: ['run_id'];
+            isOneToOne: false;
+            referencedRelation: 'survival_runs';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      survival_restrictions: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          ends_at: string | null;
+          id: string;
+          lifted_notified: boolean;
+          reason: string;
+          revoked_at: string | null;
+          revoked_by: string | null;
+          scope: string;
+          starts_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          ends_at?: string | null;
+          id?: string;
+          lifted_notified?: boolean;
+          reason: string;
+          revoked_at?: string | null;
+          revoked_by?: string | null;
+          scope: string;
+          starts_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          ends_at?: string | null;
+          id?: string;
+          lifted_notified?: boolean;
+          reason?: string;
+          revoked_at?: string | null;
+          revoked_by?: string | null;
+          scope?: string;
+          starts_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'survival_restrictions_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'survival_restrictions_revoked_by_fkey';
+            columns: ['revoked_by'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'survival_restrictions_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      survival_results: {
+        Row: {
+          created_at: string;
+          days_survived: number;
+          difficulty: string;
+          ending: string;
+          final_score: number;
+          learning_summary: Json;
+          per_player: Json;
+          real_minutes_played: number;
+          run_id: string;
+          team_size: number;
+          verified: boolean;
+        };
+        Insert: {
+          created_at?: string;
+          days_survived: number;
+          difficulty: string;
+          ending: string;
+          final_score: number;
+          learning_summary?: Json;
+          per_player?: Json;
+          real_minutes_played: number;
+          run_id: string;
+          team_size: number;
+          verified?: boolean;
+        };
+        Update: {
+          created_at?: string;
+          days_survived?: number;
+          difficulty?: string;
+          ending?: string;
+          final_score?: number;
+          learning_summary?: Json;
+          per_player?: Json;
+          real_minutes_played?: number;
+          run_id?: string;
+          team_size?: number;
+          verified?: boolean;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'survival_results_run_id_fkey';
+            columns: ['run_id'];
+            isOneToOne: true;
+            referencedRelation: 'survival_runs';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      survival_run_members: {
+        Row: {
+          deaths: number;
+          joined_at: string;
+          left_at: string | null;
+          revives_given: number;
+          role: string;
+          run_id: string;
+          status: string;
+          user_id: string;
+        };
+        Insert: {
+          deaths?: number;
+          joined_at?: string;
+          left_at?: string | null;
+          revives_given?: number;
+          role?: string;
+          run_id: string;
+          status?: string;
+          user_id: string;
+        };
+        Update: {
+          deaths?: number;
+          joined_at?: string;
+          left_at?: string | null;
+          revives_given?: number;
+          role?: string;
+          run_id?: string;
+          status?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'survival_run_members_run_id_fkey';
+            columns: ['run_id'];
+            isOneToOne: false;
+            referencedRelation: 'survival_runs';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'survival_run_members_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      survival_runs: {
+        Row: {
+          boat_stage: number;
+          config_version_id: string;
+          created_at: string;
+          current_day: number;
+          difficulty: string;
+          ended_at: string | null;
+          ending: string | null;
+          expiry_warned: boolean;
+          final_score: number | null;
+          flags: string[];
+          host_id: string;
+          id: string;
+          last_session_at: string | null;
+          mode: string;
+          seed: number;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          boat_stage?: number;
+          config_version_id: string;
+          created_at?: string;
+          current_day?: number;
+          difficulty: string;
+          ended_at?: string | null;
+          ending?: string | null;
+          expiry_warned?: boolean;
+          final_score?: number | null;
+          flags?: string[];
+          host_id: string;
+          id?: string;
+          last_session_at?: string | null;
+          mode: string;
+          seed: number;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          boat_stage?: number;
+          config_version_id?: string;
+          created_at?: string;
+          current_day?: number;
+          difficulty?: string;
+          ended_at?: string | null;
+          ending?: string | null;
+          expiry_warned?: boolean;
+          final_score?: number | null;
+          flags?: string[];
+          host_id?: string;
+          id?: string;
+          last_session_at?: string | null;
+          mode?: string;
+          seed?: number;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'survival_runs_config_version_id_fkey';
+            columns: ['config_version_id'];
+            isOneToOne: false;
+            referencedRelation: 'survival_config_versions';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'survival_runs_host_id_fkey';
+            columns: ['host_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      survival_sessions: {
+        Row: {
+          end_reason: string | null;
+          ended_at: string | null;
+          id: string;
+          room_id: string;
+          run_id: string;
+          started_at: string;
+        };
+        Insert: {
+          end_reason?: string | null;
+          ended_at?: string | null;
+          id?: string;
+          room_id: string;
+          run_id: string;
+          started_at?: string;
+        };
+        Update: {
+          end_reason?: string | null;
+          ended_at?: string | null;
+          id?: string;
+          room_id?: string;
+          run_id?: string;
+          started_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'survival_sessions_run_id_fkey';
+            columns: ['run_id'];
+            isOneToOne: false;
+            referencedRelation: 'survival_runs';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      survival_snapshots: {
+        Row: {
+          byte_size: number;
+          created_at: string;
+          day: number;
+          id: string;
+          run_id: string;
+          state: Json | null;
+          state_gz: string | null;
+          time_of_day: number;
+        };
+        Insert: {
+          byte_size: number;
+          created_at?: string;
+          day: number;
+          id?: string;
+          run_id: string;
+          state?: Json | null;
+          state_gz?: string | null;
+          time_of_day: number;
+        };
+        Update: {
+          byte_size?: number;
+          created_at?: string;
+          day?: number;
+          id?: string;
+          run_id?: string;
+          state?: Json | null;
+          state_gz?: string | null;
+          time_of_day?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'survival_snapshots_run_id_fkey';
+            columns: ['run_id'];
+            isOneToOne: false;
+            referencedRelation: 'survival_runs';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       system_settings: {
         Row: {
           is_public: boolean;
@@ -1489,6 +2268,7 @@ export type Database = {
           graphics_quality: string;
           notifications: Json;
           reduced_motion: boolean;
+          survival_chat_mode: string;
           text_scale: number;
           theme: string;
           updated_at: string;
@@ -1500,6 +2280,7 @@ export type Database = {
           graphics_quality?: string;
           notifications?: Json;
           reduced_motion?: boolean;
+          survival_chat_mode?: string;
           text_scale?: number;
           theme?: string;
           updated_at?: string;
@@ -1511,6 +2292,7 @@ export type Database = {
           graphics_quality?: string;
           notifications?: Json;
           reduced_motion?: boolean;
+          survival_chat_mode?: string;
           text_scale?: number;
           theme?: string;
           updated_at?: string;
@@ -1585,6 +2367,64 @@ export type Database = {
         };
         Relationships: [];
       };
+      survival_leaderboard_all_time: {
+        Row: {
+          difficulty: string | null;
+          ended_at: string | null;
+          ending: string | null;
+          final_score: number | null;
+          host_id: string | null;
+          real_minutes_played: number | null;
+          run_id: string | null;
+          team_size: number | null;
+          team_type: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'survival_results_run_id_fkey';
+            columns: ['run_id'];
+            isOneToOne: true;
+            referencedRelation: 'survival_runs';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'survival_runs_host_id_fkey';
+            columns: ['host_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      survival_leaderboard_weekly: {
+        Row: {
+          difficulty: string | null;
+          ended_at: string | null;
+          ending: string | null;
+          final_score: number | null;
+          host_id: string | null;
+          real_minutes_played: number | null;
+          run_id: string | null;
+          team_size: number | null;
+          team_type: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'survival_results_run_id_fkey';
+            columns: ['run_id'];
+            isOneToOne: true;
+            referencedRelation: 'survival_runs';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'survival_runs_host_id_fkey';
+            columns: ['host_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
     };
     Functions: {
       abandon_stale_attempts: { Args: never; Returns: number };
@@ -1632,9 +2472,12 @@ export type Database = {
       };
       authorize: { Args: { requested_permission: string }; Returns: boolean };
       can_access_live_session: { Args: { sid: string }; Returns: boolean };
+      can_play_survival: { Args: { uid: string }; Returns: boolean };
       can_view_group: { Args: { gid: string }; Returns: boolean };
+      chat_restricted: { Args: { uid: string }; Returns: boolean };
       current_request_ip: { Args: never; Returns: unknown };
       custom_access_token_hook: { Args: { event: Json }; Returns: Json };
+      email_outbox_retry: { Args: never; Returns: undefined };
       enqueue_email: {
         Args: {
           p_critical?: boolean;
@@ -1644,6 +2487,7 @@ export type Database = {
         };
         Returns: undefined;
       };
+      expire_reports: { Args: never; Returns: undefined };
       facilitator_overview: { Args: { p_group_id?: string }; Returns: Json };
       finalize_attempt: {
         Args: { p_attempt_id: string; p_result: Json };
@@ -1714,6 +2558,38 @@ export type Database = {
           username: string;
         }[];
       };
+      get_report_chat_evidence: {
+        Args: { p_report_id: string };
+        Returns: {
+          body_delivered: string;
+          body_original: string;
+          created_at: string;
+          filter_hits: string[];
+          id: number;
+          sender_id: string;
+          sender_username: string;
+          status: string;
+        }[];
+      };
+      get_survival_leaderboard: {
+        Args: {
+          p_cursor?: number;
+          p_difficulty: string;
+          p_limit?: number;
+          p_period?: string;
+          p_team_type: string;
+        };
+        Returns: {
+          ended_at: string;
+          ending: string;
+          final_score: number;
+          members: Json;
+          rank: number;
+          real_minutes_played: number;
+          run_id: string;
+          team_size: number;
+        }[];
+      };
       group_analytics: {
         Args: {
           p_from?: string;
@@ -1724,11 +2600,13 @@ export type Database = {
         Returns: Json;
       };
       has_role: { Args: { role_name: string }; Returns: boolean };
+      has_staff_role: { Args: { uid: string }; Returns: boolean };
       is_active_user: { Args: never; Returns: boolean };
       is_group_member: { Args: { gid: string }; Returns: boolean };
       is_group_owner: { Args: { gid: string }; Returns: boolean };
       is_my_active_group_member: { Args: { uid: string }; Returns: boolean };
       is_my_group_member: { Args: { uid: string }; Returns: boolean };
+      is_survival_member: { Args: { rid: string }; Returns: boolean };
       is_username_available: { Args: { p_username: string }; Returns: boolean };
       join_group: { Args: { code: string }; Returns: Json };
       leaderboard_eligible: {
@@ -1739,6 +2617,23 @@ export type Database = {
           last_at: string;
           level_id: number;
           user_id: string;
+        }[];
+      };
+      list_my_survival_runs: {
+        Args: never;
+        Returns: {
+          boat_stage: number;
+          created_at: string;
+          current_day: number;
+          difficulty: string;
+          ending: string;
+          final_score: number;
+          is_host: boolean;
+          last_session_at: string;
+          mode: string;
+          run_id: string;
+          status: string;
+          teammates: Json;
         }[];
       };
       moderate_attempt: {
@@ -1766,6 +2661,7 @@ export type Database = {
         Returns: undefined;
       };
       refresh_leaderboards: { Args: never; Returns: undefined };
+      refresh_survival_leaderboards: { Args: never; Returns: undefined };
       regenerate_join_code: { Args: { gid: string }; Returns: string };
       remind_assignments: { Args: never; Returns: undefined };
       security_overview: { Args: never; Returns: Json };
@@ -1773,6 +2669,7 @@ export type Database = {
         Args: { p_make_admin: boolean; p_user_id: string };
         Returns: undefined;
       };
+      survival_maintenance: { Args: never; Returns: undefined };
     };
     Enums: {
       [_ in never]: never;
