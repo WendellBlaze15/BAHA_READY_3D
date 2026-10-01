@@ -91,9 +91,6 @@ importers:
       '@upstash/redis':
         specifier: 1.39.0
         version: 1.39.0
-      colyseus:
-        specifier: 0.18.9
-        version: 0.18.9(@colyseus/auth@0.18.4)(@colyseus/core@0.18.18)(@colyseus/redis-driver@0.18.4(@colyseus/auth@0.18.4)(@colyseus/better-call@1.3.3(zod@4.6.5))(@colyseus/schema@5.0.35(typescript@7.0.2))(@colyseus/ws-transport@0.18.4)(@pm2/io@6.1.0)(express@5.2.1)(zod@4.6.5))(@colyseus/redis-presence@0.18.5(@colyseus/auth@0.18.4)(@colyseus/better-call@1.3.3(zod@4.6.5))(@colyseus/schema@5.0.35(typescript@7.0.2))(@colyseus/ws-transport@0.18.4)(@pm2/io@6.1.0)(express@5.2.1)(zod@4.6.5))(@colyseus/schema@5.0.35(typescript@7.0.2))(@colyseus/uwebsockets-transport@0.18.4(@colyseus/core@0.18.18))(@colyseus/ws-transport@0.18.4)(vite@8.3.1(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))(zod@4.6.5)
       fflate:
         specifier: 0.8.3
         version: 0.8.3
@@ -556,34 +553,6 @@ packages:
     resolution: {integrity: sha512-2Ned3SnWS2XoxG9I7zy2qbKsaev0aE9+VZrBgg3NrNBVcxJjRba7jscqWs89k7D7tsGCDAa5d17ac0DYviUACA==}
     engines: {node: '>= 22.x'}
 
-  '@colyseus/monitor@0.18.6':
-    resolution: {integrity: sha512-P138VissPbl5e1AyazrgK/Qo/hPgxu1oun0JzKnwHUOGUZgHY+w2Ojjz2VpIhDROIsa/VDBX+2E8PBwj9Rjsuw==}
-    engines: {node: '>= 22.x'}
-    peerDependencies:
-      '@colyseus/core': ^0.18.16
-
-  '@colyseus/playground@0.18.5':
-    resolution: {integrity: sha512-Qp4vvOX67fLm/YZErVFWCAi+lqU+/5zfa/mFMeCpUUAf2XwexgT2LWDFL6q3KjHwIwvZGlYBHNWWN5Z1LMCL5g==}
-    engines: {node: '>= 22.x'}
-    peerDependencies:
-      '@colyseus/auth': ^0.18.3
-      '@colyseus/core': ^0.18.16
-      cpupro: ^0.7.0
-      zod: ^4.1.12
-    peerDependenciesMeta:
-      cpupro:
-        optional: true
-      zod:
-        optional: true
-
-  '@colyseus/redis-driver@0.18.4':
-    resolution: {integrity: sha512-cAdt1PPlIDXceD99Kf8R5ogkiSvLa67jM0+whtiJMq8BQBNGyRS6wjkUJT6qqOZ3+6q5ktSQBOdnYVnjdYqgKA==}
-    engines: {node: '>= 22.x'}
-
-  '@colyseus/redis-presence@0.18.5':
-    resolution: {integrity: sha512-fhOGFijL7a4GR2jwU5LVYE9C+Psb0POFAn97MmTSEfwateqWdATP7R69Gy+wgS6Jl2WaS2Uhk/zJ7dpF7VUwMQ==}
-    engines: {node: '>= 22.x'}
-
   '@colyseus/schema@5.0.35':
     resolution: {integrity: sha512-ZmCDkUV0Iv9YlBYvjWRgzwgwZxPYoJXL5HJYvwUT0gzP5mWblBnzvRANUsLXwbBKVjMJUr9fK6j/KIqP66T3lA==}
     hasBin: true
@@ -624,16 +593,6 @@ packages:
     peerDependencies:
       '@colyseus/core': 0.18.x
       '@colyseus/ws-transport': 0.18.x
-
-  '@colyseus/uwebsockets-transport@0.18.4':
-    resolution: {integrity: sha512-Saqn3XrobCUI9shLEkcK0QnT3ETHwXW+K2s0/z0iiSbYMylPsCvWI+6dGcasVm4LajjXHYDpVadfFQM7Jplllg==}
-    engines: {node: '>= 22.x'}
-    peerDependencies:
-      '@colyseus/core': ^0.18.5
-      uwebsockets-express: ^1.4.1 || ^2.0.1
-    peerDependenciesMeta:
-      uwebsockets-express:
-        optional: true
 
   '@colyseus/ws-transport@0.18.4':
     resolution: {integrity: sha512-gSPEkhV9cX8QjJWJiXfkRF38ZIiWq7DbDvzkgGqa1zmdOSZBP1aaM9tnZyvcjc1OpG+AFggeehrs/QMDBEzz2g==}
@@ -1323,9 +1282,6 @@ packages:
   '@ionic/utils-terminal@2.3.5':
     resolution: {integrity: sha512-3cKScz9Jx2/Pr9ijj1OzGlBDfcmx7OMVBt4+P1uRR0SSW4cm1/y3Mo4OY3lfkuaYifMNBW8Wz6lQHbs1bihr7A==}
     engines: {node: '>=16.0.0'}
-
-  '@ioredis/commands@1.10.0':
-    resolution: {integrity: sha512-UmeW7z4LfctwoQ5wkhVzgq8tXkreED2xZGpX+Bg+zA+WJFZCT6c062AfCK/Dfk81xZnnwdhJCUMkitihRaoC2Q==}
 
   '@isaacs/fs-minipass@4.0.1':
     resolution: {integrity: sha512-wgm9Ehl2jpeqP3zw/7mo3kRHFp5MEDhqAdwy1fTGkHAwnkGOVsgpvQhL8B5n1qlb01jV3n/bI0ZfZp5lWA1k4w==}
@@ -4016,10 +3972,6 @@ packages:
     resolution: {integrity: sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA==}
     engines: {node: '>=6'}
 
-  cluster-key-slot@1.1.1:
-    resolution: {integrity: sha512-rwHwUfXL40Chm1r08yrhU3qpUvdVlgkKNeyeGPOxnW8/SyVDvgRaed/Uz54AqWNaTCAThlj6QAs3TZcKI0xDEw==}
-    engines: {node: '>=0.10.0'}
-
   color-convert@2.0.1:
     resolution: {integrity: sha512-RRECPsj7iu/xb5oKYcsFHSppFNnsj/52OVTRKb4zP5onXwVF3zVmmToNcOfGC+CRDpfK/U584fMg38ZHCaElKQ==}
     engines: {node: '>=7.0.0'}
@@ -4034,22 +3986,6 @@ packages:
   color-string@2.1.4:
     resolution: {integrity: sha512-Bb6Cq8oq0IjDOe8wJmi4JeNn763Xs9cfrBcaylK1tPypWzyoy2G3l90v9k64kjphl/ZJjPIShFztenRomi8WTg==}
     engines: {node: '>=18'}
-
-  colyseus@0.18.9:
-    resolution: {integrity: sha512-PrfVXiMlhdhmq8Yb4lINjhV/3SPfIL9ETkVx1e/owOrd1V8C9eaOEKWRQErLM1gE8Hcgz2uFIUXH0CxCU7O2sw==}
-    engines: {node: '>= 22.x'}
-    peerDependencies:
-      '@colyseus/auth': 0.18.x
-      '@colyseus/core': 0.18.x
-      '@colyseus/redis-driver': 0.18.x
-      '@colyseus/redis-presence': 0.18.x
-      '@colyseus/schema': ^5.0.8
-      '@colyseus/uwebsockets-transport': 0.18.x
-      '@colyseus/ws-transport': 0.18.x
-      vite: '>=6.0.0'
-    peerDependenciesMeta:
-      vite:
-        optional: true
 
   comma-separated-tokens@2.0.3:
     resolution: {integrity: sha512-Fu4hJdvzeylCfQPp9SGWidpzrMs7tTrlu6Vb8XGaRGck8QSNZJJp538Wrb60Lax4fPwR64ViY468OIUTbRlGZg==}
@@ -4277,10 +4213,6 @@ packages:
   define-properties@1.2.1:
     resolution: {integrity: sha512-8QmQKqEASLd5nx0U1B1okLElbUuuttJ/AnYmRXbbbGDWh6uS208EjD4Xqq/I9wK7u0v6O08XhTWnt5XtEbR6Dg==}
     engines: {node: '>= 0.4'}
-
-  denque@2.1.0:
-    resolution: {integrity: sha512-HVQE3AAb/pxF8fQAoiqpvg9i3evqug3hoiwakOyZAwJm+6vZehbkYXZ0l4JxS+I3QxM97v5aaRNhj8v5oBhekw==}
-    engines: {node: '>=0.10'}
 
   depd@2.0.0:
     resolution: {integrity: sha512-g7nH6P6dyDioJogAAGprGpCtVImJhpPk/roCzdb3fIh61/s/nPsfR6onyMwkCAR/OlC3yBC0lESvUoQEAssIrw==}
@@ -4964,10 +4896,6 @@ packages:
 
   intl-messageformat@11.2.15:
     resolution: {integrity: sha512-W4VNytsXyWgW5lvVchmsb9xgA5rSKqoflu3/IQ9UCtB0z4R+Bx9MoEkwFT/+30RCl/KzUoH0QGGe9lppF5SuvQ==}
-
-  ioredis@5.11.1:
-    resolution: {integrity: sha512-ehuGcf94bQXhfagULNXrJdfnWO38v070jxSx/qE87Kjzmu2fU7ro5EFAb+OPituLqgfyuQaym5DlrNydW2sJ9A==}
-    engines: {node: '>=12.22.0'}
 
   ipaddr.js@1.9.1:
     resolution: {integrity: sha512-0KI/607xoxSToH7GjN1FfSbLoU0+btTicjsQSWQlh/hZykN8KpmMf7uYwPW3R+akZ6R/w18ZlXSHBYXiYUPO3g==}
@@ -5748,10 +5676,6 @@ packages:
     resolution: {integrity: sha512-s+w+rBWnpTMwSFbaE0UXsRlg7hU4FjekKU4eyAih5T8nJuNZT1nNsskXpxmeqSK9UzkBl6UgRlnKc8hz8IEqOw==}
     hasBin: true
 
-  node-os-utils@2.0.5:
-    resolution: {integrity: sha512-YW+lcCnWhPhYMIhkR2drwphQuNdK7KTxsOyywoiZ1qh/2KKaip2/ts9W7D57opg4LFgQp/kVTAIgWuGiI41WkA==}
-    engines: {node: '>=18.0.0'}
-
   node-releases@2.0.57:
     resolution: {integrity: sha512-kQK9LGGFiHtrWiNhZtA7Qbw17AQz+dmsEKODRIVTXA9+e5MS/2gZEBhYJt13GrAz5/IOZKddH/0Z3TP/Zgo+yw==}
     engines: {node: '>=18'}
@@ -6230,14 +6154,6 @@ packages:
     resolution: {integrity: sha512-6tDA8g98We0zd0GvVeMT9arEOnTw9qM03L9cJXaCjrip1OO764RDBLBfrB4cwzNGDj5OA5ioymC9GkizgWJDUg==}
     engines: {node: '>=8'}
 
-  redis-errors@1.2.0:
-    resolution: {integrity: sha512-1qny3OExCf0UvUV/5wpYKf2YwPcOqXzkwKKSmKHiE6ZMQs5heeE/c8eXK+PNllPvmjgAbfnsbpkGZWy8cBpn9w==}
-    engines: {node: '>=4'}
-
-  redis-parser@3.0.0:
-    resolution: {integrity: sha512-DJnGAeenTdpMEH6uAJRK/uiyEIH9WVsUmoLwzudwGJUwZPp80PDBWPHXSAGNPwNvIXAbe7MSUB1zQFugFml66A==}
-    engines: {node: '>=4'}
-
   redux-thunk@3.1.0:
     resolution: {integrity: sha512-NW2r5T6ksUKXCabzhL9z+h206HQw/NJkcLm1GPImRQ8IzfXwRGqjVhKJGauHirT0DAuyy6hjdnMZaRoAcy0Klw==}
     peerDependencies:
@@ -6519,9 +6435,6 @@ packages:
   stacktrace-parser@0.1.11:
     resolution: {integrity: sha512-WjlahMgHmCJpqzU8bIBy4qtsZdU9lRlcZE3Lvyej6t4tuOuv1vk57OW3MBrj6hXBFx/nNoC9MPMTcr5YA7NQbg==}
     engines: {node: '>=6'}
-
-  standard-as-callback@2.1.0:
-    resolution: {integrity: sha512-qoRRSyROncaz1z0mvYqIE4lCd9p2R90i6GxW3uZv5ucSu8tU7B5HXUP1gG8pVZsYNVaXjk8ClXHPttLyxAL48A==}
 
   stats-gl@2.4.2:
     resolution: {integrity: sha512-g5O9B0hm9CvnM36+v7SFl39T7hmAlv541tU81ME8YeSb3i1CIP5/QdDeSB3A0la0bKNHpxpwxOVRo2wFTYEosQ==}
@@ -6831,10 +6744,6 @@ packages:
     resolution: {integrity: sha512-8FYau96o3NKOhbjKi/qNvG/W5jhzxkbdm5sj9AbZ/5T5sWqn3hJgLfGx27sRKZWTvyzCP8dLRBTf5tBTSRVUNA==}
     engines: {node: '>=16.20.0'}
     hasBin: true
-
-  uWebSockets.js@https://codeload.github.com/uNetworking/uWebSockets.js/tar.gz/cfc9a40d8132a34881813cec3d5f8e3a185b3ce3:
-    resolution: {gitHosted: true, tarball: https://codeload.github.com/uNetworking/uWebSockets.js/tar.gz/cfc9a40d8132a34881813cec3d5f8e3a185b3ce3}
-    version: 20.52.0
 
   uid-safe@2.1.5:
     resolution: {integrity: sha512-KPHm4VL5dDXKz01UuEd88Df+KzynaohSL9fBh096KWAxSKZQDI2uBrVqtvRM4rwrIrRRKsdLNML/lnaaVSRioA==}
@@ -7476,6 +7385,7 @@ snapshots:
       zod: 4.6.5
     transitivePeerDependencies:
       - supports-color
+    optional: true
 
   '@colyseus/better-call@1.3.3(zod@4.6.5)':
     dependencies:
@@ -7509,48 +7419,6 @@ snapshots:
       - supports-color
 
   '@colyseus/greeting-banner@4.0.3': {}
-
-  '@colyseus/monitor@0.18.6(@colyseus/core@0.18.18)':
-    dependencies:
-      '@colyseus/core': 0.18.18(@colyseus/auth@0.18.4)(@colyseus/better-call@1.3.3(zod@4.6.5))(@colyseus/schema@5.0.35(typescript@7.0.2))(@colyseus/ws-transport@0.18.4)(@pm2/io@6.1.0)(express@5.2.1)(zod@4.6.5)
-      node-os-utils: 2.0.5
-      zod: 4.6.5
-
-  '@colyseus/playground@0.18.5(@colyseus/auth@0.18.4)(@colyseus/core@0.18.18)(zod@4.6.5)':
-    dependencies:
-      '@colyseus/auth': 0.18.4(@colyseus/core@0.18.18)(express@5.2.1)(zod@4.6.5)
-      '@colyseus/better-call': 1.3.3(zod@4.6.5)
-      '@colyseus/core': 0.18.18(@colyseus/auth@0.18.4)(@colyseus/better-call@1.3.3(zod@4.6.5))(@colyseus/schema@5.0.35(typescript@7.0.2))(@colyseus/ws-transport@0.18.4)(@pm2/io@6.1.0)(express@5.2.1)(zod@4.6.5)
-    optionalDependencies:
-      zod: 4.6.5
-
-  '@colyseus/redis-driver@0.18.4(@colyseus/auth@0.18.4)(@colyseus/better-call@1.3.3(zod@4.6.5))(@colyseus/schema@5.0.35(typescript@7.0.2))(@colyseus/ws-transport@0.18.4)(@pm2/io@6.1.0)(express@5.2.1)(zod@4.6.5)':
-    dependencies:
-      '@colyseus/core': 0.18.18(@colyseus/auth@0.18.4)(@colyseus/better-call@1.3.3(zod@4.6.5))(@colyseus/schema@5.0.35(typescript@7.0.2))(@colyseus/ws-transport@0.18.4)(@pm2/io@6.1.0)(express@5.2.1)(zod@4.6.5)
-      ioredis: 5.11.1
-    transitivePeerDependencies:
-      - '@colyseus/auth'
-      - '@colyseus/better-call'
-      - '@colyseus/schema'
-      - '@colyseus/ws-transport'
-      - '@pm2/io'
-      - express
-      - supports-color
-      - zod
-
-  '@colyseus/redis-presence@0.18.5(@colyseus/auth@0.18.4)(@colyseus/better-call@1.3.3(zod@4.6.5))(@colyseus/schema@5.0.35(typescript@7.0.2))(@colyseus/ws-transport@0.18.4)(@pm2/io@6.1.0)(express@5.2.1)(zod@4.6.5)':
-    dependencies:
-      '@colyseus/core': 0.18.18(@colyseus/auth@0.18.4)(@colyseus/better-call@1.3.3(zod@4.6.5))(@colyseus/schema@5.0.35(typescript@7.0.2))(@colyseus/ws-transport@0.18.4)(@pm2/io@6.1.0)(express@5.2.1)(zod@4.6.5)
-      ioredis: 5.11.1
-    transitivePeerDependencies:
-      - '@colyseus/auth'
-      - '@colyseus/better-call'
-      - '@colyseus/schema'
-      - '@colyseus/ws-transport'
-      - '@pm2/io'
-      - express
-      - supports-color
-      - zod
 
   '@colyseus/schema@5.0.35(typescript@7.0.2)':
     optionalDependencies:
@@ -7595,11 +7463,6 @@ snapshots:
       dotenv: 18.0.4
     transitivePeerDependencies:
       - supports-color
-
-  '@colyseus/uwebsockets-transport@0.18.4(@colyseus/core@0.18.18)':
-    dependencies:
-      '@colyseus/core': 0.18.18(@colyseus/auth@0.18.4)(@colyseus/better-call@1.3.3(zod@4.6.5))(@colyseus/schema@5.0.35(typescript@7.0.2))(@colyseus/ws-transport@0.18.4)(@pm2/io@6.1.0)(express@5.2.1)(zod@4.6.5)
-      uWebSockets.js: https://codeload.github.com/uNetworking/uWebSockets.js/tar.gz/cfc9a40d8132a34881813cec3d5f8e3a185b3ce3
 
   '@colyseus/ws-transport@0.18.4(@colyseus/core@0.18.18)(express@5.2.1)':
     dependencies:
@@ -8164,8 +8027,6 @@ snapshots:
       wrap-ansi: 7.0.0
     transitivePeerDependencies:
       - supports-color
-
-  '@ioredis/commands@1.10.0': {}
 
   '@isaacs/fs-minipass@4.0.1':
     dependencies:
@@ -9970,6 +9831,7 @@ snapshots:
     dependencies:
       '@types/ms': 2.1.0
       '@types/node': 20.19.43
+    optional: true
 
   '@types/mdast@4.0.4':
     dependencies:
@@ -10616,8 +10478,6 @@ snapshots:
 
   clsx@2.1.1: {}
 
-  cluster-key-slot@1.1.1: {}
-
   color-convert@2.0.1:
     dependencies:
       color-name: 1.1.4
@@ -10629,25 +10489,6 @@ snapshots:
   color-string@2.1.4:
     dependencies:
       color-name: 2.1.1
-
-  colyseus@0.18.9(@colyseus/auth@0.18.4)(@colyseus/core@0.18.18)(@colyseus/redis-driver@0.18.4(@colyseus/auth@0.18.4)(@colyseus/better-call@1.3.3(zod@4.6.5))(@colyseus/schema@5.0.35(typescript@7.0.2))(@colyseus/ws-transport@0.18.4)(@pm2/io@6.1.0)(express@5.2.1)(zod@4.6.5))(@colyseus/redis-presence@0.18.5(@colyseus/auth@0.18.4)(@colyseus/better-call@1.3.3(zod@4.6.5))(@colyseus/schema@5.0.35(typescript@7.0.2))(@colyseus/ws-transport@0.18.4)(@pm2/io@6.1.0)(express@5.2.1)(zod@4.6.5))(@colyseus/schema@5.0.35(typescript@7.0.2))(@colyseus/uwebsockets-transport@0.18.4(@colyseus/core@0.18.18))(@colyseus/ws-transport@0.18.4)(vite@8.3.1(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))(zod@4.6.5):
-    dependencies:
-      '@colyseus/auth': 0.18.4(@colyseus/core@0.18.18)(express@5.2.1)(zod@4.6.5)
-      '@colyseus/core': 0.18.18(@colyseus/auth@0.18.4)(@colyseus/better-call@1.3.3(zod@4.6.5))(@colyseus/schema@5.0.35(typescript@7.0.2))(@colyseus/ws-transport@0.18.4)(@pm2/io@6.1.0)(express@5.2.1)(zod@4.6.5)
-      '@colyseus/monitor': 0.18.6(@colyseus/core@0.18.18)
-      '@colyseus/playground': 0.18.5(@colyseus/auth@0.18.4)(@colyseus/core@0.18.18)(zod@4.6.5)
-      '@colyseus/redis-driver': 0.18.4(@colyseus/auth@0.18.4)(@colyseus/better-call@1.3.3(zod@4.6.5))(@colyseus/schema@5.0.35(typescript@7.0.2))(@colyseus/ws-transport@0.18.4)(@pm2/io@6.1.0)(express@5.2.1)(zod@4.6.5)
-      '@colyseus/redis-presence': 0.18.5(@colyseus/auth@0.18.4)(@colyseus/better-call@1.3.3(zod@4.6.5))(@colyseus/schema@5.0.35(typescript@7.0.2))(@colyseus/ws-transport@0.18.4)(@pm2/io@6.1.0)(express@5.2.1)(zod@4.6.5)
-      '@colyseus/schema': 5.0.35(typescript@7.0.2)
-      '@colyseus/tools': 0.18.7(@colyseus/core@0.18.18)(@colyseus/ws-transport@0.18.4)
-      '@colyseus/uwebsockets-transport': 0.18.4(@colyseus/core@0.18.18)
-      '@colyseus/ws-transport': 0.18.4(@colyseus/core@0.18.18)(express@5.2.1)
-    optionalDependencies:
-      vite: 8.3.1(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
-    transitivePeerDependencies:
-      - cpupro
-      - supports-color
-      - zod
 
   comma-separated-tokens@2.0.3: {}
 
@@ -10662,6 +10503,7 @@ snapshots:
   connect-redis@7.1.1(express-session@1.19.0):
     dependencies:
       express-session: 1.19.0
+    optional: true
 
   content-disposition@1.1.0: {}
 
@@ -10685,7 +10527,8 @@ snapshots:
   convert-source-map@2.0.0:
     optional: true
 
-  cookie-signature@1.0.7: {}
+  cookie-signature@1.0.7:
+    optional: true
 
   cookie-signature@1.2.2: {}
 
@@ -10796,6 +10639,7 @@ snapshots:
   debug@2.6.9:
     dependencies:
       ms: 2.0.0
+    optional: true
 
   debug@3.2.7:
     dependencies:
@@ -10834,8 +10678,6 @@ snapshots:
       define-data-property: 1.1.4
       has-property-descriptors: 1.0.2
       object-keys: 1.1.1
-
-  denque@2.1.0: {}
 
   depd@2.0.0: {}
 
@@ -11305,6 +11147,7 @@ snapshots:
       '@types/jsonwebtoken': 9.0.10
       express-unless: 2.1.3
       jsonwebtoken: 9.0.3
+    optional: true
 
   express-session@1.19.0:
     dependencies:
@@ -11318,8 +11161,10 @@ snapshots:
       uid-safe: 2.1.5
     transitivePeerDependencies:
       - supports-color
+    optional: true
 
-  express-unless@2.1.3: {}
+  express-unless@2.1.3:
+    optional: true
 
   express@5.2.1:
     dependencies:
@@ -11569,6 +11414,7 @@ snapshots:
       cookie-signature: 1.2.2
       jwk-to-pem: 2.0.7
       jws: 4.0.1
+    optional: true
 
   has-bigints@1.1.0: {}
 
@@ -11730,18 +11576,6 @@ snapshots:
     dependencies:
       '@formatjs/fast-memoize': 3.1.7
       '@formatjs/icu-messageformat-parser': 3.5.18
-
-  ioredis@5.11.1:
-    dependencies:
-      '@ioredis/commands': 1.10.0
-      cluster-key-slot: 1.1.1
-      debug: 4.4.3
-      denque: 2.1.0
-      redis-errors: 1.2.0
-      redis-parser: 3.0.0
-      standard-as-callback: 2.1.0
-    transitivePeerDependencies:
-      - supports-color
 
   ipaddr.js@1.9.1: {}
 
@@ -11995,6 +11829,7 @@ snapshots:
       lodash.once: 4.1.1
       ms: 2.1.3
       semver: 7.8.5
+    optional: true
 
   jsx-ast-utils@3.3.5:
     dependencies:
@@ -12167,21 +12002,28 @@ snapshots:
     dependencies:
       p-locate: 5.0.0
 
-  lodash.includes@4.3.0: {}
+  lodash.includes@4.3.0:
+    optional: true
 
-  lodash.isboolean@3.0.3: {}
+  lodash.isboolean@3.0.3:
+    optional: true
 
-  lodash.isinteger@4.0.4: {}
+  lodash.isinteger@4.0.4:
+    optional: true
 
-  lodash.isnumber@3.0.3: {}
+  lodash.isnumber@3.0.3:
+    optional: true
 
-  lodash.isplainobject@4.0.6: {}
+  lodash.isplainobject@4.0.6:
+    optional: true
 
-  lodash.isstring@4.0.1: {}
+  lodash.isstring@4.0.1:
+    optional: true
 
   lodash.merge@4.6.2: {}
 
-  lodash.once@4.1.1: {}
+  lodash.once@4.1.1:
+    optional: true
 
   lodash@4.18.1: {}
 
@@ -12519,7 +12361,8 @@ snapshots:
       react: 19.1.0
       react-dom: 19.1.0(react@19.1.0)
 
-  ms@2.0.0: {}
+  ms@2.0.0:
+    optional: true
 
   ms@2.1.3: {}
 
@@ -12631,15 +12474,14 @@ snapshots:
       detect-libc: 2.1.2
     optional: true
 
-  node-os-utils@2.0.5: {}
-
   node-releases@2.0.57: {}
 
   normalize-svg-path@1.1.0:
     dependencies:
       svg-arc-to-cubic-bezier: 3.2.0
 
-  oauth-sign@0.9.0: {}
+  oauth-sign@0.9.0:
+    optional: true
 
   object-assign@4.1.1: {}
 
@@ -12691,7 +12533,8 @@ snapshots:
     dependencies:
       ee-first: 1.1.1
 
-  on-headers@1.1.0: {}
+  on-headers@1.1.0:
+    optional: true
 
   once@1.4.0:
     dependencies:
@@ -13022,7 +12865,8 @@ snapshots:
       '@types/react': 19.3.0
       '@types/react-dom': 19.3.0(@types/react@19.3.0)
 
-  random-bytes@1.0.0: {}
+  random-bytes@1.0.0:
+    optional: true
 
   range-parser@1.3.0: {}
 
@@ -13141,12 +12985,6 @@ snapshots:
       indent-string: 4.0.0
       strip-indent: 3.0.0
 
-  redis-errors@1.2.0: {}
-
-  redis-parser@3.0.0:
-    dependencies:
-      redis-errors: 1.2.0
-
   redux-thunk@3.1.0(redux@5.0.1):
     dependencies:
       redux: 5.0.1
@@ -13195,13 +13033,15 @@ snapshots:
       unified: 11.0.5
       vfile: 6.0.3
 
-  request-compose@2.1.7: {}
+  request-compose@2.1.7:
+    optional: true
 
   request-oauth@1.0.1:
     dependencies:
       oauth-sign: 0.9.0
       qs: 6.16.0
       uuid: 11.1.1
+    optional: true
 
   require-directory@2.1.1: {}
 
@@ -13535,8 +13375,6 @@ snapshots:
   stacktrace-parser@0.1.11:
     dependencies:
       type-fest: 0.7.1
-
-  standard-as-callback@2.1.0: {}
 
   stats-gl@2.4.2(@types/three@0.186.0)(three@0.186.1):
     dependencies:
@@ -13893,11 +13731,10 @@ snapshots:
       '@typescript/typescript-win32-arm64': 7.0.2
       '@typescript/typescript-win32-x64': 7.0.2
 
-  uWebSockets.js@https://codeload.github.com/uNetworking/uWebSockets.js/tar.gz/cfc9a40d8132a34881813cec3d5f8e3a185b3ce3: {}
-
   uid-safe@2.1.5:
     dependencies:
       random-bytes: 1.0.0
+    optional: true
 
   unbox-primitive@1.1.0:
     dependencies:
