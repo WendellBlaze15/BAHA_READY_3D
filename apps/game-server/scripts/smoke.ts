@@ -174,7 +174,7 @@ async function main() {
   );
   const left = new Promise<number>((r) => guest.onLeave((c) => r(c)));
   await fetch(`${base}/admin/rooms/${host.roomId}/close`, { method: 'POST', headers: auth });
-  check('admin force-close disconnects players', (await left) === 4004);
+  check('admin force-close disconnects players', (await left) === 4104);
   await new Promise((r) => setTimeout(r, 500));
   check('code released at start', (await redis.get(`survival:code:${code}`)) === null);
 }

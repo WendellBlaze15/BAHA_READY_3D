@@ -59,6 +59,13 @@ export const PlayerState = schema(
     /** Active hold: '' | loot | craft, and when it completes (sim seconds). */
     channel: t.string(),
     channelEndsAt: t.float32(),
+    // Phase 6
+    bleedOutAt: t.float32(),
+    protectedUntil: t.float32(),
+    spectator: t.boolean(),
+    rescued: t.boolean(),
+    onBoat: t.boolean(),
+    sleeping: t.boolean(),
   },
   'PlayerState',
 );
@@ -77,10 +84,35 @@ export const CampState = schema(
     fireLit: t.boolean(),
     /** Comma-separated built structures. */
     structures: t.string(),
+    /** Next upgrade: work progress 0–1 and materials deposited so far. */
+    upgradeProgress: t.float32(),
+    upgradeDeposited: t.map('uint16'),
   },
   'CampState',
 );
 export type CampState = SchemaType<typeof CampState>;
+
+export const NpcState = schema(
+  { x: t.float32(), z: t.float32(), state: t.string(), followUserId: t.string() },
+  'NpcState',
+);
+export type NpcState = SchemaType<typeof NpcState>;
+
+export const CrateState = schema({ x: t.float32(), z: t.float32() }, 'CrateState');
+export type CrateState = SchemaType<typeof CrateState>;
+
+export const BoatState = schema(
+  {
+    /** Completed stages (0–6). */
+    stage: t.uint8(),
+    progress: t.float32(),
+    deposited: t.map('uint16'),
+    tripDepartAt: t.float32(),
+    tripArriveAt: t.float32(),
+  },
+  'BoatState',
+);
+export type BoatState = SchemaType<typeof BoatState>;
 
 export const SurvivalState = schema(
   {
@@ -112,6 +144,23 @@ export const SurvivalState = schema(
     /** Shared camp storage: item → qty (team-visible). */
     storage: t.map('uint16'),
     camp: CampState,
+
+    // Objectives (Phase 6)
+    boat: BoatState,
+    npcs: t.map(NpcState),
+    crates: t.map(CrateState),
+    /** none | incoming | arriving | lifting | done */
+    heli: t.string(),
+    heliAt: t.float32(),
+    signalActive: t.boolean(),
+    secondWindsLeft: t.uint8(),
+    // Team vote (kick / abandon)
+    voteType: t.string(),
+    voteTarget: t.string(),
+    voteYes: t.uint8(),
+    voteNo: t.uint8(),
+    voteNeeded: t.uint8(),
+    voteEndsAt: t.number(),
   },
   'SurvivalState',
 );

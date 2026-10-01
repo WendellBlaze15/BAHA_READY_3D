@@ -234,6 +234,113 @@ export const roleSchema = z
   })
   .strict();
 
+/** Camp upgrades (Section 9.2): level 2 unlocks workbench tier 2 (later boat stages). */
+export const campUpgradeSchema = z
+  .object({
+    level: z.number().int().min(2).max(3),
+    materials: z.array(z.object({ item: key, qty: z.number().int().min(1).max(200) })).min(1),
+    workSeconds: z.number().min(5).max(1200),
+    workbenchTier: z.number().int().min(1).max(3),
+  })
+  .strict();
+
+export const DEFAULT_CAMP_UPGRADES = [
+  {
+    level: 2,
+    materials: [
+      { item: 'wood', qty: 10 },
+      { item: 'nails', qty: 15 },
+      { item: 'tarp', qty: 1 },
+    ],
+    workSeconds: 40,
+    workbenchTier: 2,
+  },
+  {
+    level: 3,
+    materials: [
+      { item: 'wood', qty: 15 },
+      { item: 'metal_sheet', qty: 3 },
+      { item: 'rope', qty: 4 },
+    ],
+    workSeconds: 60,
+    workbenchTier: 2,
+  },
+];
+
+/** Scheduled/random events, downed/death timings and the Day-30 rescue (Sections 10, 12, 13, 14). */
+export const eventsConfigSchema = z
+  .object({
+    radioHour: hour,
+    supplyDropHour: hour,
+    /** Storm damage when the build site / storage are not covered. */
+    stormBoatProgressLoss: z.number().min(0).max(1),
+    stormStorageLossRatio: z.number().min(0).max(1),
+    /** Share of looted containers that refill after a storm (floating debris always refills). */
+    debrisRespawnRatio: z.number().min(0).max(1),
+    /** A dead player's dropped bag stays this many in-game days. */
+    droppedBagDays: z.number().min(0.5).max(10),
+    /** Easy/Normal: stat loss on respawn is per difficulty; all-dead loses this much stage progress. */
+    allDeadBoatProgressLoss: z.number().min(0).max(1),
+    downedCrawlSpeedMul: z.number().min(0).max(1),
+    /** Days without help before a stranded survivor is evacuated by others (lost for the score). */
+    survivorWaitDays: z.number().int().min(1).max(30),
+    /** Real seconds the boat takes from the dock to the rescue point. */
+    boatTravelSec: z.number().min(5).max(600),
+    heliArriveSec: z.number().min(0).max(120),
+    heliLiftSecPerPlayer: z.number().min(0.5).max(30),
+    campfireBurnHours: z.number().min(1).max(48),
+  })
+  .strict();
+
+export const DEFAULT_EVENTS = {
+  radioHour: 7,
+  supplyDropHour: 9,
+  stormBoatProgressLoss: 0.25,
+  stormStorageLossRatio: 0.2,
+  debrisRespawnRatio: 0.3,
+  droppedBagDays: 2,
+  allDeadBoatProgressLoss: 0.5,
+  downedCrawlSpeedMul: 0.3,
+  survivorWaitDays: 4,
+  boatTravelSec: 120,
+  heliArriveSec: 10,
+  heliLiftSecPerPlayer: 3,
+  campfireBurnHours: 8,
+};
+
+/** Hazard rules (Section 13.2) — warnings always come before danger. */
+export const hazardsConfigSchema = z
+  .object({
+    warnRadiusM: z.number().min(1).max(30),
+    /** Live wires: entering water inside the zone downs the player instantly. */
+    liveWireLethal: z.boolean(),
+    currentPushMps: z.number().min(0).max(10),
+    currentHealthPerMin: z.number().min(0).max(50),
+    ratBiteChancePerMin: z.number().min(0).max(1),
+    snakeBiteChancePerMin: z.number().min(0).max(1),
+    snakeDamage: z.number().min(0).max(100),
+    collapseChancePerHour: z.number().min(0).max(1),
+    collapseWarnSec: z.number().min(1).max(30),
+    collapseDamage: z.number().min(0).max(100),
+    /** Axe/shove scares critters away from you for this long (s). */
+    critterScareSec: z.number().min(0).max(600),
+  })
+  .strict();
+
+export const DEFAULT_HAZARDS = {
+  warnRadiusM: 6,
+  liveWireLethal: true,
+  currentPushMps: 1.5,
+  currentHealthPerMin: 2,
+  ratBiteChancePerMin: 0.15,
+  snakeBiteChancePerMin: 0.08,
+  snakeDamage: 10,
+  collapseChancePerHour: 0.1,
+  collapseWarnSec: 5,
+  collapseDamage: 25,
+  critterScareSec: 60,
+};
+
 export const scoringSchema = z
   .object({
     perDay: z.number(),
@@ -279,6 +386,10 @@ export const survivalConfigSchema = z
     scoring: scoringSchema,
     /** NPC stranded survivors per run (min/max). */
     survivors: z.object({ min: z.number().int().min(0), max: z.number().int().min(0) }),
+    // Added after v1 (defaults keep earlier published versions valid).
+    campUpgrades: z.array(campUpgradeSchema).max(2).default(DEFAULT_CAMP_UPGRADES),
+    events: eventsConfigSchema.default({ ...DEFAULT_EVENTS }),
+    hazards: hazardsConfigSchema.default({ ...DEFAULT_HAZARDS }),
   })
   .strict()
   .superRefine((cfg, ctx) => {
@@ -307,6 +418,9 @@ export const survivalConfigSchema = z
       s.materials.forEach((m, j) => check(m.item, ['boatStages', i, 'materials', j]));
       s.tools.forEach((t, j) => check(t, ['boatStages', i, 'tools', j]));
     });
+    cfg.campUpgrades.forEach((u, i) =>
+      u.materials.forEach((m, j) => check(m.item, ['campUpgrades', i, 'materials', j])),
+    );
     if (new Set(cfg.items.map((i) => i.key)).size !== cfg.items.length)
       ctx.addIssue({ code: 'custom', message: 'duplicate item keys', path: ['items'] });
     if (cfg.survivors.max < cfg.survivors.min)
@@ -318,3 +432,4 @@ export type ItemDef = z.infer<typeof itemSchema>;
 export type RecipeDef = z.infer<typeof recipeSchema>;
 export type BoatStageDef = z.infer<typeof boatStageSchema>;
 export type DifficultyConfig = z.infer<typeof difficultySchema>;
+export type CampUpgradeDef = z.infer<typeof campUpgradeSchema>;

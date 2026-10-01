@@ -18,7 +18,7 @@ import { services, type PlayerProfile } from '../services/index.ts';
 import { Simulation } from '../sim/simulation.ts';
 import { ChatHandler } from './chat-handler.ts';
 import { AuthCode, RoomCode } from './errors.ts';
-import { CampState, PlayerState, SurvivalState } from './state.ts';
+import { BoatState, CampState, PlayerState, SurvivalState } from './state.ts';
 import { syncWorld } from './sync.ts';
 
 export const ROOM_NAME = 'survival';
@@ -34,6 +34,7 @@ const LEARNING_FLUSH_MS = 10_000;
 const EMOTE_INTERVAL_SEC = 2;
 const PING_RANGE_M = 80;
 const PING_TTL_MS = 10_000;
+const VOTE_SEC = 30;
 
 const createOptions = z.object({
   protocol: z.number().int(),
@@ -103,6 +104,9 @@ export class SurvivalRoom extends Room<{
   private runReady: Promise<void> | null = null;
   private sim: Simulation | null = null;
   private chat!: ChatHandler;
+  private votes = new Map<string, boolean>();
+  private voteTimer: { clear(): void } | null = null;
+  private kicksThisSession = 0;
 
   /** Runs at matchmaking time, BEFORE a room is created or a seat is reserved. */
   static async onAuth(token: string, options: unknown, context: AuthContext): Promise<AuthData> {
@@ -147,6 +151,7 @@ export class SurvivalRoom extends Room<{
     st.configVersion = version;
     st.protocol = SURVIVAL_PROTOCOL_VERSION;
     st.camp = new CampState();
+    st.boat = new BoatState();
 
     const code = await services().codes.reserve(this.roomId, CODE_TTL_SEC);
     if (!code) throw new ServerError(AuthCode.UNAVAILABLE, 'no_code_available');
@@ -394,7 +399,9 @@ export class SurvivalRoom extends Room<{
       p.anim = 'emote';
       this.broadcast('emote', { userId: uid, id: m.id });
     });
-    // Phase 6: build, revive, vote.
+    play('build', (s, uid, m) => s.obj.build(uid, m.target, m.action));
+    play('revive', (s, uid, m) => s.obj.revive(uid, m.targetUserId));
+    on('vote', (c, m) => this.vote(c.auth!.profile.userId, m));
 
     // Anything else (unknown or not-yet-implemented types) is ignored.
     this.onMessage('*', () => {});
@@ -485,6 +492,93 @@ export class SurvivalRoom extends Room<{
       else this.clientOf(o.to)?.send(o.type, o.payload);
     }
     syncWorld(this.state, sim);
+    if (sim.obj.result && this.state.phase === 'playing') void this.onRunEnded();
+  }
+
+  /** Ending reached: results stay on screen (chat still works); Phase 7 persists them. */
+  private async onRunEnded() {
+    this.state.phase = 'ended';
+    void this.syncMetadata();
+    const r = this.sim!.obj.result!;
+    log.info('run ended', {
+      roomId: this.roomId,
+      runId: this.runId,
+      ending: r.ending,
+      score: r.score,
+    });
+    await this.flushLearning();
+    if (this.runId)
+      try {
+        await services().db.setRunStatus(
+          this.runId,
+          r.ending === 'failed' ? 'failed' : 'completed',
+        );
+      } catch (e) {
+        log.error('run end persistence failed', { roomId: this.roomId, ...errInfo(e) });
+      }
+  }
+
+  // ── Team votes (Section 17.5 vote-kick; abandon) ────────────────────────────
+
+  private vote(uid: string, m: ClientMessage<'vote'>) {
+    if (this.state.phase !== 'playing' || this.state.mode === 'solo') return;
+    const st = this.state;
+    if (!st.voteType) {
+      if (!m.value || m.type === 'rest') return; // rest votes arrive with saving (Phase 7)
+      if (
+        m.type === 'kick' &&
+        (!m.targetUserId || m.targetUserId === uid || !st.players.has(m.targetUserId))
+      )
+        return;
+      const voters = [...st.players.values()].filter(
+        (p) => p.connected && p.userId !== (m.type === 'kick' ? m.targetUserId : ''),
+      );
+      st.voteType = m.type;
+      st.voteTarget = m.targetUserId ?? '';
+      // Kick: majority of the others (3 of 5, 2 of 3); abandon: everyone.
+      st.voteNeeded = m.type === 'kick' ? Math.ceil((voters.length + 1) / 2) : voters.length;
+      st.voteEndsAt = Date.now() + VOTE_SEC * 1000;
+      this.votes.clear();
+      this.voteTimer = this.clock.setTimeout(() => this.closeVote(false), VOTE_SEC * 1000);
+      this.broadcast('vote:started', { type: m.type, targetUserId: st.voteTarget, by: uid });
+    } else if (st.voteType !== m.type || (m.targetUserId ?? '') !== st.voteTarget) return;
+    if (st.voteType === 'kick' && uid === st.voteTarget) return;
+    this.votes.set(uid, m.value);
+    st.voteYes = [...this.votes.values()].filter(Boolean).length;
+    st.voteNo = this.votes.size - st.voteYes;
+    if (st.voteYes >= st.voteNeeded) this.closeVote(true);
+  }
+
+  private closeVote(passed: boolean) {
+    const st = this.state;
+    const type = st.voteType;
+    const target = st.voteTarget;
+    this.voteTimer?.clear();
+    this.voteTimer = null;
+    st.voteType = '';
+    st.voteTarget = '';
+    st.voteYes = st.voteNo = st.voteNeeded = 0;
+    st.voteEndsAt = 0;
+    this.broadcast('vote:ended', { type, targetUserId: target, passed });
+    if (!passed) return;
+    if (type === 'kick') {
+      // Removed from this session only (the run keeps their membership).
+      this.kicked.add(target);
+      this.sim?.setConnected(target, false);
+      this.clientOf(target)?.leave(RoomCode.KICKED);
+      this.kicksThisSession += 1;
+      if (this.kicksThisSession >= 2) this.sim?.flags.add('frequent_kicks');
+    } else if (type === 'abandon') {
+      void (async () => {
+        if (this.runId)
+          try {
+            await services().db.setRunStatus(this.runId, 'abandoned');
+          } catch (e) {
+            log.warn('abandon persistence failed', errInfo(e));
+          }
+        await this.disconnect(RoomCode.RUN_ABANDONED);
+      })();
+    }
   }
 
   private async flushLearning() {

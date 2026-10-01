@@ -1,6 +1,13 @@
 import type { Simulation } from '../sim/simulation.ts';
 import type { SimPlayer } from '../sim/types.ts';
-import { BagSlot, DropState, type PlayerState, type SurvivalState } from './state.ts';
+import {
+  BagSlot,
+  CrateState,
+  DropState,
+  NpcState,
+  type PlayerState,
+  type SurvivalState,
+} from './state.ts';
 
 const r8 = (v: number) => Math.round(Math.max(0, Math.min(100, v)));
 
@@ -25,7 +32,10 @@ export function syncWorld(state: SurvivalState, sim: Simulation, full = false) {
   }
 
   if (full) for (const id of sim.lootOpened) d.loot.add(id);
-  for (const id of d.loot) state.lootOpened.set(id, true);
+  for (const id of d.loot) {
+    if (sim.lootOpened.has(id)) state.lootOpened.set(id, true);
+    else state.lootOpened.delete(id);
+  }
 
   if (full) for (const id of sim.chopsLeft.keys()) d.chops.add(id);
   for (const id of d.chops) state.chops.set(id, sim.chopsLeft.get(id) ?? 0);
@@ -56,6 +66,61 @@ export function syncWorld(state: SurvivalState, sim: Simulation, full = false) {
     state.camp.structures = [...sim.camp.structures].sort().join(',');
   }
   state.camp.fireLit = sim.fireLit();
+  syncObjectives(state, sim, full, d.camp);
+}
+
+function syncMap(
+  target: Map<string, number> & { delete(k: string): boolean; set(k: string, v: number): unknown },
+  src: Map<string, number>,
+) {
+  for (const k of [...target.keys()]) if (!src.has(k)) target.delete(k);
+  for (const [k, v] of src) target.set(k, v);
+}
+
+function syncObjectives(state: SurvivalState, sim: Simulation, full: boolean, campDirty: boolean) {
+  const o = sim.obj;
+  const d = o.dirty;
+  if (full || d.boat) {
+    state.boat.stage = o.boat.stage;
+    state.boat.progress = o.boat.progress;
+    syncMap(state.boat.deposited as never, o.boat.deposited);
+  }
+  if (full || campDirty) {
+    state.camp.upgradeProgress = o.campUpgrade.progress;
+    syncMap(state.camp.upgradeDeposited as never, o.campUpgrade.deposited);
+  }
+  if (full || d.npcs) {
+    for (const n of o.npcs.values()) {
+      // Hidden survivors are not revealed to clients before they appear.
+      if (n.state === 'hidden') continue;
+      let ns = state.npcs.get(n.id);
+      if (!ns) {
+        ns = new NpcState();
+        state.npcs.set(n.id, ns);
+      }
+      ns.x = n.x;
+      ns.z = n.z;
+      ns.state = n.state;
+      ns.followUserId = n.followUserId ?? '';
+    }
+  }
+  if (full || d.crates) {
+    for (const k of [...state.crates.keys()]) if (!o.crates.has(k)) state.crates.delete(k);
+    for (const c of o.crates.values()) {
+      if (state.crates.has(c.id)) continue;
+      const cs = new CrateState();
+      cs.x = c.x;
+      cs.z = c.z;
+      state.crates.set(c.id, cs);
+    }
+  }
+  state.boat.tripDepartAt = o.boatTrip?.departAt ?? 0;
+  state.boat.tripArriveAt = o.boatTrip?.arriveAt ?? 0;
+  state.heli = o.heli.phase;
+  state.heliAt = o.heli.at;
+  state.signalActive = o.signalActive();
+  state.secondWindsLeft = Math.max(0, sim.diff.secondWinds - o.secondWindsUsed);
+  o.dirty = { boat: false, npcs: false, crates: false, heli: false };
 }
 
 function syncPlayer(ps: PlayerState, p: SimPlayer, sim: Simulation, bag: boolean) {
@@ -78,7 +143,13 @@ function syncPlayer(ps: PlayerState, p: SimPlayer, sim: Simulation, bag: boolean
   ps.body = p.equip.body ?? '';
   ps.feet = p.equip.feet ?? '';
   ps.channel = p.channel?.kind ?? '';
-  ps.channelEndsAt = p.channel?.endsAt ?? 0;
+  ps.channelEndsAt = Number.isFinite(p.channel?.endsAt) ? (p.channel?.endsAt ?? 0) : -1;
+  ps.bleedOutAt = p.bleedOutAt ?? 0;
+  ps.protectedUntil = p.protectedUntil;
+  ps.spectator = p.spectator;
+  ps.rescued = p.rescued;
+  ps.onBoat = p.onBoat;
+  ps.sleeping = p.sleeping;
   if (!bag) return;
   ps.weight = sim.bagWeightOf(p);
   ps.slotsUsed = p.bag.filter(Boolean).length;

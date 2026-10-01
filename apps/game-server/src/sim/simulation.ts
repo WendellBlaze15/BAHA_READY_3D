@@ -55,6 +55,7 @@ import type {
   SimPlayer,
   Weather,
 } from './types.ts';
+import { Objectives } from './objectives.ts';
 
 /** Interaction reach (m): loot, drops, storage, giving, healing. */
 export const INTERACT_RANGE_M = 2.5;
@@ -70,8 +71,6 @@ const CLIENT_AHEAD_SLACK_SEC = 0.25;
 const CLOCK_DRIFT_RATE = 0.05;
 /** Stats are advanced in 1 s steps (in-game minutes vary by difficulty). */
 const STAT_STEP_SEC = 1;
-/** Campfire burn time per build (in-game minutes). */
-const FIRE_BURN_MIN = 8 * 60;
 const NEAR_FIRE_M = 4;
 const GIVE_OFFER_SEC = 15;
 const MAX_DROPS = 300;
@@ -94,12 +93,15 @@ export interface SimOptions {
   map?: SurvivalMap;
 }
 
-interface Drop {
+export interface Drop {
   item: string;
   qty: number;
   durability?: number;
   x: number;
   z: number;
+  /** Absolute in-game minute when it disappears (a dead player's "Naiwang Bag"). */
+  expiresAtMin?: number;
+  fromBagOf?: string;
 }
 
 interface GiveOffer {
@@ -143,7 +145,11 @@ export class Simulation {
   readonly storage = new Map<string, number>();
   readonly camp = { structures: new Set<string>(), fireMinutesLeft: 0, workbenchTier: 1, level: 1 };
   readonly activity: ActivityEntry[] = [];
+  /** Pending learning events (flushed to the DB by the room). */
   readonly learning: LearningEvent[] = [];
+  /** Every learning event of this session (ending summary). */
+  readonly learningLog: LearningEvent[] = [];
+  readonly obj: Objectives;
   /** Run flags for admin review (e.g. repeated movement violations). */
   readonly flags = new Set<string>();
 
@@ -182,6 +188,7 @@ export class Simulation {
     );
     for (const c of this.map.chopTargets) this.chopsLeft.set(c.id, c.chops);
     o.players.forEach((p, i) => this.addPlayer(p, i));
+    this.obj = new Objectives(this);
     this.updateWeather();
   }
 
@@ -211,6 +218,17 @@ export class Simulation {
       lastSwingAt: -Infinity,
       channel: null,
       lastAt: {},
+      bleedOutAt: null,
+      protectedUntil: 0,
+      pendingRespawn: false,
+      spectator: false,
+      deaths: 0,
+      revivesGiven: 0,
+      boatStagesBuilt: 0,
+      sleeping: false,
+      scaredUntil: 0,
+      onBoat: false,
+      rescued: false,
     };
     this.players.set(p.userId, sp);
     this.dirty.bags.add(p.userId);
@@ -232,26 +250,28 @@ export class Simulation {
     return (r?.[key] as number | undefined) ?? (key === 'materialSaveRatio' ? 0 : 1);
   }
 
-  private send(to: string | 'all', type: string, payload: Record<string, unknown> = {}) {
+  send(to: string | 'all', type: string, payload: Record<string, unknown> = {}) {
     this.out.push({ to, type, payload });
   }
 
-  private deny(uid: string, action: string, reason: string) {
+  deny(uid: string, action: string, reason: string) {
     this.send(uid, 'action:denied', { action, reason });
   }
 
-  private canAct(p: SimPlayer | undefined): p is SimPlayer {
-    return !!p && p.life === 'alive' && !this.paused;
+  canAct(p: SimPlayer | undefined): p is SimPlayer {
+    return !!p && p.life === 'alive' && !p.onBoat && !p.rescued && !this.paused && !this.obj.result;
   }
 
   // ── Tick ─────────────────────────────────────────────────────────────────
 
   tick(dt: number) {
+    if (this.obj.result) return;
     this.time += dt;
     for (const p of this.players.values()) this.stepPlayerStamina(p, dt);
     this.completeChannels();
     this.expireOffers();
     if (this.paused) return;
+    this.obj.tick(dt);
 
     this.statAcc += dt;
     if (this.statAcc < STAT_STEP_SEC) return;
@@ -259,7 +279,10 @@ export class Simulation {
     this.statAcc = 0;
 
     const prevPhase = this.dayPhase;
-    const adv = advanceClock(this.clock, step, this.diff, this.cfg.session);
+    // Everyone (alive) asleep in the shelter → time runs faster to dawn.
+    const awake = [...this.players.values()].filter((p) => p.life === 'alive');
+    const allAsleep = awake.length > 0 && awake.every((p) => p.sleeping);
+    const adv = advanceClock(this.clock, step, this.diff, this.cfg.session, allAsleep);
     this.clock = adv.clock;
     this.dayPhase = phaseAt(this.clock.minute, this.cfg.session);
     if (this.dayPhase !== prevPhase)
@@ -274,7 +297,8 @@ export class Simulation {
         this.send('all', 'event', { kind: 'fire_out' });
       }
     }
-    for (const p of this.players.values()) this.stepStats(p, adv.minutesElapsed);
+    for (const p of this.players.values()) this.stepStats(p, adv.minutesElapsed, allAsleep);
+    this.obj.minuteStep(adv.minutesElapsed, adv.crossedDawn);
   }
 
   private stepPlayerStamina(p: SimPlayer, dt: number) {
@@ -285,8 +309,8 @@ export class Simulation {
     p.sprint = stepSprint(p.sprint, dt, this.cfg.actions, { moving }).state;
   }
 
-  private stepStats(p: SimPlayer, minutes: number) {
-    if (p.life !== 'alive' || minutes <= 0) return;
+  private stepStats(p: SimPlayer, minutes: number, allAsleep = false) {
+    if (p.life !== 'alive' || p.rescued || minutes <= 0) return;
     const band = depthBand(depthAt(this.map, p.x, p.z, this.waterLevel));
     const atCamp = inRect(this.map.camp, p.x, p.z);
     const { stats, events } = tickStats(
@@ -299,7 +323,7 @@ export class Simulation {
         inWater: band !== 'dry',
         nearFire: this.fireLit() && dist2(p, this.map.campFire) <= NEAR_FIRE_M,
         sheltered: atCamp && this.camp.structures.has('shelter'),
-        sleeping: false,
+        sleeping: allAsleep && p.sleeping,
         wearingBoots: p.equip.feet === 'boots',
         wearingRaincoat: p.equip.body === 'raincoat',
         storm: this.weather === 'storm',
@@ -311,21 +335,37 @@ export class Simulation {
     for (const e of events) {
       if (e.type === 'effect_added') {
         this.send(p.userId, 'effect', { effect: e.effect, on: true });
+        if (e.effect === 'infection' || e.effect === 'stomach_illness')
+          this.obj.counters.sicknessEvents += 1;
         if (e.effect === 'infection') this.learn(p.userId, 'got_leptospirosis_risk', false);
         if (e.effect === 'hypothermia') this.learn(p.userId, 'got_hypothermia', false);
       } else if (e.type === 'effect_removed') {
         this.send(p.userId, 'effect', { effect: e.effect, on: false });
       } else if (e.type === 'health_zero') {
-        // Phase 6 adds bleed-out, revive and death rules on top of this state.
-        p.life = 'downed';
-        p.channel = null;
-        this.send('all', 'event', { kind: 'downed', userId: p.userId });
+        this.obj.down(p);
       }
     }
   }
 
   fireLit() {
     return this.camp.fireMinutesLeft > 0;
+  }
+
+  extinguishFire() {
+    this.camp.fireMinutesLeft = 0;
+    this.camp.structures.delete('campfire');
+    this.dirty.camp = true;
+    this.send('all', 'event', { kind: 'fire_out' });
+  }
+
+  /** Server-side placement (respawn, boat ride): resets the movement baseline. */
+  placeAt(p: SimPlayer, x: number, z: number, y = groundAt(this.map, x, z)) {
+    p.x = x;
+    p.z = z;
+    p.y = Math.max(y, groundAt(this.map, x, z));
+    p.last = { x, y: p.y, z, t: null, at: this.time };
+    p.minOffset = null;
+    this.send(p.userId, 'correction', { x, y: p.y, z, reason: 'placed' });
   }
 
   /** Hourly weather (seeded): storm nights from the schedule, otherwise a chance of rain. */
@@ -356,6 +396,7 @@ export class Simulation {
     this.weather = next;
     if (next === 'storm') {
       this.waterLevel += this.diff.waterRisePerStorm;
+      this.obj?.onStormStart();
       this.send('all', 'event', {
         kind: 'storm_started',
         day: this.clock.day,
@@ -369,7 +410,9 @@ export class Simulation {
 
   move(uid: string, m: ClientMessage<'move'>) {
     const p = this.players.get(uid);
-    if (!this.canAct(p)) return;
+    if (!p || this.paused || this.obj.result || p.onBoat || p.rescued) return;
+    if (p.life !== 'alive' && p.life !== 'downed') return;
+    const downed = p.life === 'downed';
     const clientSec = m.t / 1000;
     if (p.last.t !== null && clientSec <= p.last.t) return; // stale / out of order
     // Clock baseline (server − client): fixed at the first sample, then allowed to drift down
@@ -385,11 +428,16 @@ export class Simulation {
     const t = Math.min(clientSec, this.time - p.minOffset + CLIENT_AHEAD_SLACK_SEC);
     const prevT = p.last.t ?? t - (this.time - p.last.at + CLIENT_AHEAD_SLACK_SEC);
 
-    const wantSprint = m.sprinting && !sprintLocked(p.stats);
+    const wantSprint = m.sprinting && !downed && !sprintLocked(p.stats);
     p.sprint = setSprintIntent(p.sprint, wantSprint);
     // Sprint speed is allowed while the server's stamina says sprinting, or would start now
     // (the client starts a frame before our tick sees the intent).
-    const a = this.cfg.actions;
+    const a = downed
+      ? {
+          ...this.cfg.actions,
+          walkSpeed: this.cfg.actions.walkSpeed * this.cfg.events.downedCrawlSpeedMul,
+        }
+      : this.cfg.actions;
     const sprintOk =
       p.sprint.sprinting ||
       (wantSprint && !p.sprint.exhausted && p.sprint.stamina >= a.sprintMinStartStamina);
@@ -417,6 +465,7 @@ export class Simulation {
     const dt = Math.max(1e-3, t - prevT);
     p.speed = d / dt;
     if (d > 0.01) p.movedAt = this.time;
+    if (d > 0.3) p.sleeping = false;
     p.x = m.x;
     p.y = m.y;
     p.z = m.z;
@@ -480,6 +529,7 @@ export class Simulation {
     };
     if (p.channel) this.cancelChannel(p, 'acted');
     this.send('all', 'swing', { userId: uid, tool: r.tool, clientSeq: m.clientSeq });
+    if (this.obj.scareCritters(p)) this.learn(uid, 'used_right_tool', true);
     if (!r.target) return;
     if (r.tool === 'axe') {
       const w = wearTool(p.bag, 'axe');
@@ -514,7 +564,7 @@ export class Simulation {
     if (!this.canAct(p)) return;
     const [kind, id = ''] = targetId.split(':');
     if (kind === 'loot') {
-      const lp = this.map.lootPoints.find((l) => l.id === id);
+      const lp = this.findLoot(id);
       if (!lp || this.lootOpened.has(id)) return this.deny(uid, 'interact', 'gone');
       if (dist2(p, lp) > INTERACT_RANGE_M) return this.deny(uid, 'interact', 'too_far');
       this.startChannel(p, {
@@ -539,15 +589,15 @@ export class Simulation {
     } else if (kind === 'storage') {
       if (!this.atCamp(p)) return this.deny(uid, 'interact', 'not_at_camp');
       this.send(uid, 'storage:open', { activity: this.activity.slice(-30) });
-    } else this.deny(uid, 'interact', 'unknown');
+    } else if (!this.obj.interact(p, kind ?? '', id)) this.deny(uid, 'interact', 'unknown');
   }
 
-  private startChannel(p: SimPlayer, c: Channel) {
+  startChannel(p: SimPlayer, c: Channel) {
     p.channel = c;
     this.send(p.userId, 'channel', { kind: c.kind, target: c.target, endsAt: c.endsAt });
   }
 
-  private cancelChannel(p: SimPlayer, reason: string) {
+  cancelChannel(p: SimPlayer, reason: string) {
     if (!p.channel) return;
     this.send(p.userId, 'channel:cancelled', {
       kind: p.channel.kind,
@@ -562,17 +612,38 @@ export class Simulation {
       const c = p.channel;
       if (!c || this.time < c.endsAt) continue;
       p.channel = null;
-      if (p.life !== 'alive') continue;
+      // A downed solo player may finish a Second Wind on themselves.
+      if (p.life !== 'alive' && !(c.kind === 'revive' && c.target === p.userId)) continue;
       if (c.kind === 'loot') this.openLoot(p, c.target);
-      else this.finishCraft(p, c.target);
+      else if (c.kind === 'craft') this.finishCraft(p, c.target);
+      else if (c.kind === 'revive') this.obj.completeRevive(p, c.target);
     }
   }
 
-  private openLoot(p: SimPlayer, id: string) {
+  /** Map containers plus dynamic supply crates. */
+  findLoot(id: string) {
     const lp = this.map.lootPoints.find((l) => l.id === id);
+    if (lp) return lp;
+    const c = this.obj.crates.get(id);
+    return c
+      ? { id: c.id, zone: c.zone, x: c.x, z: c.z, container: 'box' as const, holdSec: 2 }
+      : undefined;
+  }
+
+  openLoot(p: SimPlayer, id: string) {
+    const lp = this.findLoot(id);
     if (!lp || this.lootOpened.has(id)) return;
     this.lootOpened.add(id);
     this.dirty.loot.add(id);
+    const crate = this.obj.crates.get(id);
+    if (crate) {
+      const found = this.obj.rollCrate(crate);
+      for (const f of found) this.give(p, f.item, f.qty);
+      this.obj.crates.delete(id);
+      this.obj.dirty.crates = true;
+      this.send(p.userId, 'loot:opened', { lootId: id, items: found });
+      return;
+    }
     // Seeded per container + day: same result regardless of who opens it or when in the day.
     const rng = createStateRng(subSeed(this.seed, `loot:${id}:${this.clock.day}`));
     const found = rollLoot({
@@ -589,7 +660,7 @@ export class Simulation {
   }
 
   /** Adds to the bag; whatever doesn't fit drops at the player's feet. */
-  private give(p: SimPlayer, item: string, qty: number) {
+  give(p: SimPlayer, item: string, qty: number) {
     const r = addItem(p.bag, item, qty, this.items);
     p.bag = r.bag;
     this.dirty.bags.add(p.userId);
@@ -599,7 +670,7 @@ export class Simulation {
     }
   }
 
-  private spawnDrop(d: Drop) {
+  spawnDrop(d: Drop) {
     if (this.drops.size >= MAX_DROPS) {
       const oldest = this.drops.keys().next().value;
       if (oldest) this.drops.delete(oldest);
@@ -610,7 +681,7 @@ export class Simulation {
 
   // ── Bag ──────────────────────────────────────────────────────────────────
 
-  private setBag(p: SimPlayer, bag: Bag) {
+  setBag(p: SimPlayer, bag: Bag) {
     p.bag = bag;
     this.dirty.bags.add(p.userId);
     for (const slot of ['hand', 'body', 'feet'] as const) {
@@ -670,6 +741,7 @@ export class Simulation {
     if (!this.canAct(p)) return;
     const s = p.bag[slot];
     const def: ItemDef | undefined = s ? this.items.get(s.item) : undefined;
+    if (s && this.obj.useSignalItem(p, s.item)) return;
     if (!s || !def?.use) return this.deny(uid, 'use', 'not_usable');
     if (def.use.equip) return this.equip(uid, slot);
 
@@ -707,6 +779,7 @@ export class Simulation {
       for (const c of u.causes ?? [])
         if (this.rng.chance(c.chance) && !st.effects.includes(c.effect as StatusEffect)) {
           st.effects.push(c.effect as StatusEffect);
+          this.obj.counters.sicknessEvents += 1;
           this.send(target.userId, 'effect', { effect: c.effect, on: true });
         }
       target.stats = st;
@@ -805,7 +878,7 @@ export class Simulation {
     this.logActivity(uid, 'withdraw', item, r.added);
   }
 
-  private logActivity(userId: string, action: ActivityEntry['action'], item: string, qty: number) {
+  logActivity(userId: string, action: ActivityEntry['action'], item: string, qty: number) {
     const e: ActivityEntry = { at: this.time, day: this.clock.day, userId, action, item, qty };
     this.activity.push(e);
     if (this.activity.length > 500) this.activity.splice(0, this.activity.length - 500);
@@ -860,7 +933,8 @@ export class Simulation {
       this.spawnDrop({ item: r.output.item, qty: res.overflow, x: p.x, z: p.z });
     if (res.structure) {
       this.camp.structures.add(res.structure);
-      if (res.structure === 'campfire') this.camp.fireMinutesLeft = FIRE_BURN_MIN;
+      if (res.structure === 'campfire')
+        this.camp.fireMinutesLeft = this.cfg.events.campfireBurnHours * 60;
       this.dirty.camp = true;
       this.send('all', 'event', { kind: 'built', structure: res.structure, userId: p.userId });
     }
@@ -893,7 +967,9 @@ export class Simulation {
   }
 
   learn(userId: string | null, eventKey: string, isPositive: boolean) {
-    this.learning.push({ userId, day: this.clock.day, eventKey, isPositive });
+    const e = { userId, day: this.clock.day, eventKey, isPositive };
+    this.learning.push(e);
+    this.learningLog.push(e);
     if (userId) this.send(userId, 'learning', { key: eventKey, positive: isPositive });
   }
 

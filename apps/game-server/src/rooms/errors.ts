@@ -14,13 +14,17 @@ export const AuthCode = {
   UNAVAILABLE: 503,
 } as const;
 
-/** WebSocket join errors and close codes (onJoin / client.leave / disconnect): 4xxx app range. */
+/**
+ * WebSocket join errors and close codes (onJoin / client.leave / disconnect). 41xx so they never
+ * collide with Colyseus codes (4000–4003 and 4010 "may try reconnect" are reserved by the SDK).
+ */
 export const RoomCode = {
-  KICKED: 4001,
-  LOBBY_IDLE: 4002,
-  ELIGIBILITY_LOST: 4003,
-  FORCE_CLOSED: 4004,
-  ALREADY_STARTED: 4006,
-  DUPLICATE_SESSION: 4009,
-  SERVER_SHUTDOWN: 4099,
+  KICKED: 4101,
+  LOBBY_IDLE: 4102,
+  ELIGIBILITY_LOST: 4103,
+  FORCE_CLOSED: 4104,
+  ALREADY_STARTED: 4106,
+  DUPLICATE_SESSION: 4109,
+  RUN_ABANDONED: 4110,
+  SERVER_SHUTDOWN: 4199,
 } as const;

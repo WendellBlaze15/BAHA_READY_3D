@@ -124,6 +124,17 @@ describe('run lifecycle and synced world', () => {
     expect(corr[0].x).toBeCloseTo(me.x);
   });
 
+  it('vote-kick removes a player from this session only', async () => {
+    const { host, p2, room } = await startCoop();
+    const left = new Promise<number>((r) => p2.onLeave((c) => r(c)));
+    host.send('vote', { type: 'kick', targetUserId: U.p2, value: true });
+    expect(await left).toBe(4101);
+    await wait(100);
+    expect(room.state.players.get(U.p2)?.connected).toBe(false);
+    expect(room.simulation!.players.get(U.p2)!.life).toBe('disconnected');
+    expect(room.state.voteType).toBe('');
+  });
+
   it('drops malformed intents', async () => {
     const { host, room } = await startCoop();
     const me = room.state.players.get(U.host)!;

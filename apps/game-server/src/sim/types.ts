@@ -5,7 +5,7 @@ export type Weather = 'clear' | 'rain' | 'storm';
 
 /** A hold action (loot container, crafting): moving away or acting cancels it. */
 export interface Channel {
-  kind: 'loot' | 'craft';
+  kind: 'loot' | 'craft' | 'revive' | 'build';
   target: string;
   endsAt: number;
   x: number;
@@ -38,6 +38,22 @@ export interface SimPlayer {
   channel: Channel | null;
   /** Per-action last-use times (sim seconds) for throttles. */
   lastAt: Record<string, number>;
+
+  // Phase 6
+  bleedOutAt: number | null;
+  /** Respawn/revive protection (sim seconds). */
+  protectedUntil: number;
+  pendingRespawn: boolean;
+  /** Hard permadeath: watches the rest of the run. */
+  spectator: boolean;
+  deaths: number;
+  revivesGiven: number;
+  boatStagesBuilt: number;
+  sleeping: boolean;
+  /** Rats/snakes keep away until (after an axe/shove scare). */
+  scaredUntil: number;
+  onBoat: boolean;
+  rescued: boolean;
 }
 
 /** Messages the room must deliver after a sim call (to one player or everyone). */

@@ -1,5 +1,12 @@
 import { DEFAULT_ACTIONS, DEFAULT_CAMERA } from '../level-config.ts';
-import type { BoatStageDef, RecipeDef, SurvivalConfig } from './config.ts';
+import {
+  DEFAULT_CAMP_UPGRADES,
+  DEFAULT_EVENTS,
+  DEFAULT_HAZARDS,
+  type BoatStageDef,
+  type RecipeDef,
+  type SurvivalConfig,
+} from './config.ts';
 import { DEFAULT_ITEMS } from './items.ts';
 
 /** Seed recipes (Normal, solo; scaled by difficulty and team size at runtime). */
@@ -511,4 +518,7 @@ export const DEFAULT_SURVIVAL_CONFIG: SurvivalConfig = {
     endingMultiplier: { full_rescue: 1, partial_rescue: 0.6, failed: 0.2 },
   },
   survivors: { min: 3, max: 6 },
+  campUpgrades: DEFAULT_CAMP_UPGRADES,
+  events: { ...DEFAULT_EVENTS },
+  hazards: { ...DEFAULT_HAZARDS },
 };

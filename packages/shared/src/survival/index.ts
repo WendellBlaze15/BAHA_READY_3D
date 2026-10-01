@@ -11,6 +11,7 @@ export * from './crafting.ts';
 export * from './rules.ts';
 export * from './messages.ts';
 export * from './version.ts';
+export * from './radio.ts';
 export * from './map/types.ts';
 export * from './map/query.ts';
 export { BARANGAY_1 } from './map/barangay-1.ts';
