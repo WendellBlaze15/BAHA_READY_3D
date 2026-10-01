@@ -1,27 +1,24 @@
 import { createHash } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { Ratelimit, type Duration } from '@upstash/ratelimit';
+import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { survivalConfigSchema } from '@baha/shared/survival';
 import type { Env } from '../env.ts';
 import { errInfo, log } from '../log.ts';
 import { randomCode } from './codes.ts';
+import { LIMITS, memoryCodeStore, memoryLimiter, memoryModeration } from './memory.ts';
 import type {
+  ChatMode,
+  ChatModeration,
   CodeStore,
   Eligibility,
   Identity,
   LimitAction,
+  Persistence,
   RateLimiter,
   Services,
 } from './types.ts';
-
-const LIMITS: Record<LimitAction, { limit: number; window: Duration }> = {
-  room_create: { limit: 6, window: '10 m' },
-  room_join: { limit: 30, window: '10 m' },
-  code_lookup: { limit: 20, window: '5 m' },
-  chat_send: { limit: 12, window: '30 s' },
-};
 
 const CODE_PREFIX = 'survival:code:';
 
@@ -33,10 +30,7 @@ export function liveServices(env: Env): Services {
   const issuer = `${env.SUPABASE_URL.replace(/\/+$/, '')}/auth/v1`;
   const jwks = createRemoteJWKSet(
     new URL(env.SUPABASE_JWKS_URL ?? `${issuer}/.well-known/jwks.json`),
-    {
-      cacheMaxAge: 10 * 60_000,
-      cooldownDuration: 30_000,
-    },
+    { cacheMaxAge: 10 * 60_000, cooldownDuration: 30_000 },
   );
 
   // Fallback cache for auth.getUser (keyed by token hash, never the token itself).
@@ -64,29 +58,38 @@ export function liveServices(env: Env): Services {
     return id;
   }
 
-  let enabledCache: { at: number; on: boolean } | null = null;
-  async function survivalEnabled(): Promise<boolean> {
-    if (enabledCache && Date.now() - enabledCache.at < 15_000) return enabledCache.on;
+  /** Public system_settings booleans, cached 15 s (kill switches). */
+  const settingCache = new Map<string, { at: number; on: boolean }>();
+  async function settingOn(key: string): Promise<boolean> {
+    const c = settingCache.get(key);
+    if (c && Date.now() - c.at < 15_000) return c.on;
     const { data } = await supabase
       .from('system_settings')
       .select('value')
-      .eq('key', 'survival_enabled')
+      .eq('key', key)
       .maybeSingle();
     const on = data?.value !== false && data?.value !== 'false';
-    enabledCache = { at: Date.now(), on };
+    settingCache.set(key, { at: Date.now(), on });
     return on;
   }
 
   async function checkEligibility(userId: string): Promise<Eligibility> {
-    if (!(await survivalEnabled())) return { ok: false, reason: 'survival_disabled' };
-    const [{ data: can, error }, { data: profile }] = await Promise.all([
-      supabase.rpc('can_play_survival', { uid: userId }),
-      supabase
-        .from('profiles')
-        .select('id, username, avatar_config')
-        .eq('id', userId)
-        .maybeSingle(),
-    ]);
+    if (!(await settingOn('survival_enabled'))) return { ok: false, reason: 'survival_disabled' };
+    const [{ data: can, error }, { data: profile }, { data: restricted }, { data: settings }] =
+      await Promise.all([
+        supabase.rpc('can_play_survival', { uid: userId }),
+        supabase
+          .from('profiles')
+          .select('id, username, avatar_config')
+          .eq('id', userId)
+          .maybeSingle(),
+        supabase.rpc('chat_restricted', { uid: userId }),
+        supabase
+          .from('user_settings')
+          .select('survival_chat_mode')
+          .eq('user_id', userId)
+          .maybeSingle(),
+      ]);
     if (error) throw new Error(`eligibility check failed: ${error.message}`);
     if (can !== true || !profile) return { ok: false, reason: 'not_eligible' };
     return {
@@ -95,6 +98,8 @@ export function liveServices(env: Env): Services {
         userId,
         username: String(profile.username),
         avatar: (profile.avatar_config as Record<string, unknown>) ?? {},
+        chatRestricted: restricted === true,
+        chatMode: (settings?.survival_chat_mode as ChatMode | undefined) ?? 'full',
       },
     };
   }
@@ -117,6 +122,185 @@ export function liveServices(env: Env): Services {
     configCache = { at: Date.now(), value };
     return value;
   }
+
+  const must = <T>(r: { data: T | null; error: { message: string } | null }, what: string): T => {
+    if (r.error) throw new Error(`${what}: ${r.error.message}`);
+    return r.data as T;
+  };
+
+  const db: Persistence = {
+    async createRun(run) {
+      const row = must(
+        await supabase
+          .from('survival_runs')
+          .insert({
+            host_id: run.hostId,
+            mode: run.mode,
+            difficulty: run.difficulty,
+            config_version_id: run.configVersionId,
+            seed: run.seed,
+            status: 'lobby',
+          })
+          .select('id')
+          .single(),
+        'createRun',
+      );
+      return (row as unknown as { id: string }).id;
+    },
+    async setRunStatus(runId, status) {
+      must(
+        await supabase
+          .from('survival_runs')
+          .update({
+            status,
+            ...(status !== 'lobby' && status !== 'active'
+              ? { ended_at: new Date().toISOString() }
+              : {}),
+          })
+          .eq('id', runId),
+        'setRunStatus',
+      );
+    },
+    async setMembers(runId, members) {
+      must(
+        await supabase.from('survival_run_members').upsert(
+          members.map((m) => ({
+            run_id: runId,
+            user_id: m.userId,
+            role: m.role,
+            status: 'active',
+          })),
+        ),
+        'setMembers',
+      );
+    },
+    async createSession(runId, roomId) {
+      const row = must(
+        await supabase
+          .from('survival_sessions')
+          .insert({ run_id: runId, room_id: roomId })
+          .select('id')
+          .single(),
+        'createSession',
+      );
+      await supabase
+        .from('survival_runs')
+        .update({ last_session_at: new Date().toISOString() })
+        .eq('id', runId);
+      return (row as unknown as { id: string }).id;
+    },
+    async endSession(sessionId, reason) {
+      must(
+        await supabase
+          .from('survival_sessions')
+          .update({ ended_at: new Date().toISOString(), end_reason: reason.slice(0, 60) })
+          .eq('id', sessionId),
+        'endSession',
+      );
+    },
+    async insertChat(row) {
+      const r = must(
+        await supabase
+          .from('survival_chat_messages')
+          .insert({
+            run_id: row.runId,
+            session_id: row.sessionId,
+            sender_id: row.senderId,
+            body_original: row.bodyOriginal.slice(0, 600),
+            body_delivered: row.bodyDelivered,
+            status: row.status,
+            filter_hits: row.filterHits,
+          })
+          .select('id')
+          .single(),
+        'insertChat',
+      );
+      return Number((r as unknown as { id: number }).id);
+    },
+    async insertLearning(rows) {
+      if (!rows.length) return;
+      must(
+        await supabase.from('survival_learning_events').insert(
+          rows.map((r) => ({
+            run_id: r.runId,
+            user_id: r.userId,
+            day: r.day,
+            event_key: r.eventKey,
+            is_positive: r.isPositive,
+          })),
+        ),
+        'insertLearning',
+      );
+    },
+    async insertChatFlag(userId, runId, reason) {
+      must(
+        await supabase
+          .from('survival_chat_flags')
+          .insert({ user_id: userId, run_id: runId, reason: reason.slice(0, 200) }),
+        'insertChatFlag',
+      );
+    },
+    async createReport(row) {
+      const r = must(
+        await supabase
+          .from('survival_reports')
+          .insert({
+            run_id: row.runId,
+            reporter_id: row.reporterId,
+            reported_id: row.reportedId,
+            reason: row.reason,
+            priority: row.priority,
+            message_id: row.messageId,
+            evidence: row.evidence,
+          })
+          .select('id')
+          .single(),
+        'createReport',
+      );
+      return (r as unknown as { id: string }).id;
+    },
+    async loadRelations(userIds) {
+      if (!userIds.length) return { mutes: [], blocks: [] };
+      const list = userIds.join(',');
+      const [m, b] = await Promise.all([
+        supabase
+          .from('survival_mutes')
+          .select('muter_id, muted_id')
+          .or(`muter_id.in.(${list}),muted_id.in.(${list})`),
+        supabase
+          .from('survival_blocks')
+          .select('blocker_id, blocked_id')
+          .or(`blocker_id.in.(${list}),blocked_id.in.(${list})`),
+      ]);
+      return {
+        mutes: (must(m, 'loadMutes') as { muter_id: string; muted_id: string }[]).map((r) => [
+          r.muter_id,
+          r.muted_id,
+        ]),
+        blocks: (must(b, 'loadBlocks') as { blocker_id: string; blocked_id: string }[]).map((r) => [
+          r.blocker_id,
+          r.blocked_id,
+        ]),
+      };
+    },
+    async setMute(muterId, mutedId, on) {
+      if (on)
+        must(
+          await supabase.from('survival_mutes').upsert({ muter_id: muterId, muted_id: mutedId }),
+          'setMute',
+        );
+      else
+        must(
+          await supabase
+            .from('survival_mutes')
+            .delete()
+            .eq('muter_id', muterId)
+            .eq('muted_id', mutedId),
+          'unsetMute',
+        );
+    },
+    chatEnabled: () => settingOn('survival_chat_enabled'),
+  };
 
   const redis =
     env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN
@@ -167,57 +351,23 @@ export function liveServices(env: Env): Services {
       }
     : memoryLimiter();
 
-  return { verifyToken, checkEligibility, currentConfig, codes, limiter };
-}
-
-/** Single-instance code store (local dev without Upstash, and tests). */
-export function memoryCodeStore(): CodeStore {
-  const m = new Map<string, { roomId: string; until: number }>();
-  const live = (code: string) => {
-    const e = m.get(code);
-    if (e && e.until < Date.now()) m.delete(code);
-    return m.get(code);
-  };
-  return {
-    async reserve(roomId, ttlSec) {
-      for (let i = 0; i < 8; i++) {
-        const code = randomCode();
-        if (live(code)) continue;
-        m.set(code, { roomId, until: Date.now() + ttlSec * 1000 });
-        return code;
+  // Auto-mute: `chatmute:until:<uid>` (ms, TTL = mute length) + 24 h offense counter.
+  const moderation: ChatModeration = redis
+    ? {
+        async mutedUntil(userId) {
+          return Number((await redis.get<number>(`survival:chatmute:until:${userId}`)) ?? 0);
+        },
+        async applyAutoMute(userId, minutesByLevel) {
+          const k = `survival:chatmute:count:${userId}`;
+          const level = await redis.incr(k);
+          if (level === 1) await redis.expire(k, 24 * 3600);
+          const minutes = minutesByLevel[Math.min(level, minutesByLevel.length) - 1] ?? 10;
+          const until = Date.now() + minutes * 60_000;
+          await redis.set(`survival:chatmute:until:${userId}`, until, { ex: minutes * 60 });
+          return { until, level };
+        },
       }
-      return null;
-    },
-    resolve: async (code) => live(code)?.roomId ?? null,
-    refresh: async (code, ttlSec) => {
-      const e = live(code);
-      if (e) e.until = Date.now() + ttlSec * 1000;
-    },
-    release: async (code) => {
-      m.delete(code);
-    },
-  };
-}
+    : memoryModeration();
 
-/** Fixed-window in-memory limiter with the same limits (dev/tests only). */
-export function memoryLimiter(): RateLimiter {
-  const hits = new Map<string, { start: number; n: number }>();
-  const ms = (w: Duration) => {
-    const [n, u] = w.split(' ') as [string, string];
-    return Number(n) * ({ ms: 1, s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 }[u] ?? 1000);
-  };
-  return {
-    async check(action, key) {
-      const c = LIMITS[action];
-      const k = `${action}:${key}`;
-      const now = Date.now();
-      const e = hits.get(k);
-      if (!e || now - e.start > ms(c.window)) {
-        hits.set(k, { start: now, n: 1 });
-        return true;
-      }
-      e.n++;
-      return e.n <= c.limit;
-    },
-  };
+  return { verifyToken, checkEligibility, currentConfig, codes, limiter, db, moderation };
 }

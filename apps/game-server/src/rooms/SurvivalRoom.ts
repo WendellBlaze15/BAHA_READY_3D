@@ -1,18 +1,25 @@
+import { randomInt } from 'node:crypto';
 import { CloseCode, Room, ServerError, type AuthContext, type Client } from '@colyseus/core';
+import { StateView } from '@colyseus/schema';
 import { z } from 'zod';
 import {
   DIFFICULTIES,
   SURVIVAL_PROTOCOL_VERSION,
+  inBounds,
   parseClientMessage,
   type ClientMessage,
   type ClientMessageType,
+  type Difficulty,
   type SurvivalConfig,
 } from '@baha/shared/survival';
 import { errInfo, log } from '../log.ts';
 import { originAllowed } from '../policy.ts';
 import { services, type PlayerProfile } from '../services/index.ts';
+import { Simulation } from '../sim/simulation.ts';
+import { ChatHandler } from './chat-handler.ts';
 import { AuthCode, RoomCode } from './errors.ts';
-import { LobbyPlayer, SurvivalState } from './state.ts';
+import { CampState, PlayerState, SurvivalState } from './state.ts';
+import { syncWorld } from './sync.ts';
 
 export const ROOM_NAME = 'survival';
 
@@ -21,6 +28,12 @@ const CODE_TTL_SEC = 15 * 60;
 const ELIGIBILITY_RECHECK_MS = 5 * 60_000;
 /** Lobby drops get a short grace; in-game reconnection uses config.session.reconnectSec. */
 const LOBBY_RECONNECT_SEC = 30;
+/** 20 Hz simulation and patches (Section 18.4). */
+const TICK_MS = 50;
+const LEARNING_FLUSH_MS = 10_000;
+const EMOTE_INTERVAL_SEC = 2;
+const PING_RANGE_M = 80;
+const PING_TTL_MS = 10_000;
 
 const createOptions = z.object({
   protocol: z.number().int(),
@@ -48,10 +61,26 @@ export interface RoomMeta {
 
 export type Phase = 'lobby' | 'cutscene' | 'playing' | 'ended';
 
+/** Messages handled by the simulation once the run is playing. */
+type SimMessage = Exclude<
+  ClientMessageType,
+  | 'lobby:setRole'
+  | 'lobby:ready'
+  | 'lobby:setDifficulty'
+  | 'lobby:kick'
+  | 'lobby:start'
+  | 'cutscene:done'
+  | 'chat:send'
+  | 'chat:mute'
+  | 'chat:unmute'
+  | 'chat:report'
+  | 'quickChat'
+>;
+
 /**
- * One Survival session (Section 20). Phase 4 = lobby: create/join by code, roles, ready,
- * difficulty, kick, start, host transfer, reconnection, idle close. The simulation lands in
- * Phase 5 on top of this room.
+ * One Survival session (Sections 16–20): lobby (codes, roles, ready, kick, start, host
+ * transfer), the synced cutscene, then the authoritative 20 Hz simulation. All client input is
+ * schema-validated and applied with the verified JWT user id — never a client-supplied id.
  */
 export class SurvivalRoom extends Room<{
   state: SurvivalState;
@@ -69,6 +98,11 @@ export class SurvivalRoom extends Room<{
   private lastActivity = Date.now();
   private codeReleased = false;
   private createdAt = Date.now();
+  private runId: string | null = null;
+  private sessionId: string | null = null;
+  private runReady: Promise<void> | null = null;
+  private sim: Simulation | null = null;
+  private chat!: ChatHandler;
 
   /** Runs at matchmaking time, BEFORE a room is created or a seat is reserved. */
   static async onAuth(token: string, options: unknown, context: AuthContext): Promise<AuthData> {
@@ -112,6 +146,7 @@ export class SurvivalRoom extends Room<{
     st.minPlayers = solo ? 1 : config.session.minCoopPlayers;
     st.configVersion = version;
     st.protocol = SURVIVAL_PROTOCOL_VERSION;
+    st.camp = new CampState();
 
     const code = await services().codes.reserve(this.roomId, CODE_TTL_SEC);
     if (!code) throw new ServerError(AuthCode.UNAVAILABLE, 'no_code_available');
@@ -120,13 +155,26 @@ export class SurvivalRoom extends Room<{
     await this.setPrivate(true);
     await this.syncMetadata();
 
+    this.chat = new ChatHandler(config.chat, {
+      runId: () => this.runId,
+      sessionId: () => this.sessionId,
+      members: () =>
+        this.clients
+          .filter((c) => c.auth)
+          .map((c) => ({
+            profile: c.auth!.profile,
+            send: (t: string, p: unknown) => c.send(t, p),
+          })),
+      sendTo: (uid, t, p) => this.clientOf(uid)?.send(t, p),
+    });
     this.registerMessages();
     this.clock.setInterval(() => void this.housekeeping(), 30_000);
     this.clock.setInterval(() => void this.recheckEligibility(), ELIGIBILITY_RECHECK_MS);
+    this.clock.setInterval(() => void this.flushLearning(), LEARNING_FLUSH_MS);
     log.info('room created', { roomId: this.roomId, mode: st.mode, difficulty: st.difficulty });
   }
 
-  onJoin(client: SurvivalClient) {
+  async onJoin(client: SurvivalClient) {
     const auth = client.auth!;
     const { userId } = auth.profile;
     if (this.kicked.has(userId)) throw new ServerError(RoomCode.KICKED, 'kicked');
@@ -135,8 +183,7 @@ export class SurvivalRoom extends Room<{
     if (this.state.players.has(userId))
       throw new ServerError(RoomCode.DUPLICATE_SESSION, 'duplicate_session');
 
-    client.userData = undefined;
-    const p = new LobbyPlayer();
+    const p = new PlayerState();
     p.userId = userId;
     p.username = auth.profile.username;
     p.role = this.state.mode === 'solo' ? 'solo' : '';
@@ -144,12 +191,19 @@ export class SurvivalRoom extends Room<{
     p.connected = true;
     p.joinedAt = Date.now();
     p.avatar = JSON.stringify(pickAvatar(auth.profile.avatar));
+    p.life = 'alive';
     p.isHost = this.state.players.size === 0;
     if (p.isHost) this.state.hostId = userId;
     this.state.players.set(userId, p);
+    this.attachView(client);
     this.touch();
     void this.syncMetadata();
     log.info('player joined', { roomId: this.roomId, userId });
+
+    // The run row is created when the host arrives (chat is stored against it from the lobby on).
+    if (p.isHost && !this.runReady) this.runReady = this.createRun(userId);
+    await this.chat.loadRelations([...this.state.players.keys()]);
+    client.send('chat:history', { lines: this.chat.historyFor(auth.profile) });
   }
 
   async onDrop(client: SurvivalClient) {
@@ -157,6 +211,7 @@ export class SurvivalRoom extends Room<{
     if (!p) return;
     p.connected = false;
     p.ready = false;
+    this.sim?.setConnected(p.userId, false);
     const seconds =
       this.state.phase === 'lobby' ? LOBBY_RECONNECT_SEC : this.config.session.reconnectSec;
     try {
@@ -169,15 +224,20 @@ export class SurvivalRoom extends Room<{
   onReconnect(client: SurvivalClient) {
     const p = this.playerOf(client);
     if (p) p.connected = true;
+    if (p) this.sim?.setConnected(p.userId, true);
+    this.attachView(client);
     this.touch();
   }
 
   onLeave(client: SurvivalClient, code?: number) {
     const userId = client.auth?.profile.userId;
     if (!userId || !this.state.players.has(userId)) return;
-    // During a run the player stays in the roster (Phase 7 keeps their run membership).
+    // During a run the player stays in the roster as "disconnected" (Section 16.5).
     if (this.state.phase === 'lobby') this.state.players.delete(userId);
-    else this.state.players.get(userId)!.connected = false;
+    else {
+      this.state.players.get(userId)!.connected = false;
+      this.sim?.setConnected(userId, false);
+    }
     if (this.state.hostId === userId) this.transferHost();
     void this.syncMetadata();
     log.info('player left', { roomId: this.roomId, userId, code });
@@ -185,6 +245,21 @@ export class SurvivalRoom extends Room<{
 
   async onDispose() {
     await this.releaseCode();
+    await this.flushLearning();
+    try {
+      await this.runReady;
+      const s = services().db;
+      if (this.runId && this.state.phase === 'lobby') await s.setRunStatus(this.runId, 'abandoned');
+      if (this.sessionId)
+        await s.endSession(
+          this.sessionId,
+          this.state.phase === 'lobby' ? 'lobby_closed' : 'room_closed',
+        );
+    } catch (e) {
+      log.warn('dispose persistence failed', { roomId: this.roomId, ...errInfo(e) });
+    }
+    if (this.sim?.flags.size)
+      log.warn('run flags', { roomId: this.roomId, runId: this.runId, flags: [...this.sim.flags] });
     log.info('room disposed', { roomId: this.roomId });
   }
 
@@ -198,12 +273,14 @@ export class SurvivalRoom extends Room<{
   private registerMessages() {
     const on = <T extends ClientMessageType>(
       type: T,
-      fn: (c: SurvivalClient, m: ClientMessage<T>) => void,
+      fn: (c: SurvivalClient, m: ClientMessage<T>) => void | Promise<void>,
     ) =>
       this.onMessage(type, (client: SurvivalClient, raw: unknown) => {
         const msg = parseClientMessage(type, raw);
-        if (!msg) return; // invalid payloads are dropped silently
-        fn(client, msg.data as ClientMessage<T>);
+        if (!msg || !client.auth) return; // invalid payloads are dropped silently
+        const r = fn(client, msg.data as ClientMessage<T>);
+        if (r instanceof Promise)
+          r.catch((e) => log.warn('handler failed', { type, ...errInfo(e) }));
       });
 
     on('lobby:setRole', (c, m) => {
@@ -239,7 +316,7 @@ export class SurvivalRoom extends Room<{
     on('lobby:kick', (c, m) => {
       if (!this.isHost(c) || this.state.phase !== 'lobby') return;
       if (m.userId === this.state.hostId) return;
-      const target = this.clients.find((x) => x.auth?.profile.userId === m.userId);
+      const target = this.clientOf(m.userId);
       this.kicked.add(m.userId);
       this.state.players.delete(m.userId);
       target?.leave(RoomCode.KICKED);
@@ -251,16 +328,73 @@ export class SurvivalRoom extends Room<{
       if (!this.isHost(c) || this.state.phase !== 'lobby') return;
       const why = this.cannotStart();
       if (why) return this.reject(c, why);
-      void this.startRun();
+      return this.startRun();
     });
 
     on('cutscene:done', (c) => {
       if (this.state.phase !== 'cutscene') return;
-      const uid = c.auth?.profile.userId;
-      if (uid) this.cutsceneDone.add(uid);
+      this.cutsceneDone.add(c.auth!.profile.userId);
       const connected = [...this.state.players.values()].filter((p) => p.connected);
       if (connected.every((p) => this.cutsceneDone.has(p.userId))) this.beginPlay();
     });
+
+    // ── Communication (lobby and in-run) ──
+    on('chat:send', (c, m) => {
+      this.touch();
+      return this.chat.send(c.auth!.profile, m);
+    });
+    on('chat:mute', (c, m) => this.chat.mute(c.auth!.profile, m.userId, true));
+    on('chat:unmute', (c, m) => this.chat.mute(c.auth!.profile, m.userId, false));
+    on('chat:report', (c, m) => this.chat.report(c.auth!.profile, m));
+    on('quickChat', (c, m) => this.chat.quick(c.auth!.profile, m));
+
+    // ── Simulation intents (playing only) ──
+    const play = <T extends SimMessage>(
+      type: T,
+      fn: (sim: Simulation, uid: string, m: ClientMessage<T>) => void,
+    ) =>
+      on(type, (c, m) => {
+        if (this.state.phase !== 'playing' || !this.sim) return;
+        fn(this.sim, c.auth!.profile.userId, m);
+        this.flush();
+      });
+
+    play('move', (s, uid, m) => s.move(uid, m));
+    play('action:jump', (s, uid) => s.jump(uid));
+    play('action:attack', (s, uid, m) => s.attack(uid, m));
+    play('interact', (s, uid, m) => s.interact(uid, m.targetId));
+    play('useItem', (s, uid, m) => s.useItem(uid, m.slot, m.targetUserId));
+    play('bag:move', (s, uid, m) => s.bagMove(uid, m.from, m.to));
+    play('bag:drop', (s, uid, m) => s.bagDrop(uid, m.slot, m.qty));
+    play('bag:split', (s, uid, m) => s.bagSplit(uid, m.slot, m.qty));
+    play('bag:equip', (s, uid, m) => s.equip(uid, m.slot));
+    play('give:offer', (s, uid, m) => s.offerGive(uid, m.toUserId, m.slot));
+    play('give:accept', (s, uid, m) => s.acceptGive(uid, m.offerId));
+    play('storage:deposit', (s, uid, m) => s.deposit(uid, m.itemKey, m.qty));
+    play('storage:withdraw', (s, uid, m) => s.withdraw(uid, m.itemKey, m.qty));
+    play('craft', (s, uid, m) => s.craft(uid, m.recipeKey));
+    play('pause', (s, uid, m) => s.setPaused(uid, m.paused));
+    play('ping', (s, uid, m) => {
+      const p = s.players.get(uid);
+      if (!p || p.life === 'dead') return;
+      if (!inBounds(s.map, m.x, m.z) || Math.hypot(m.x - p.x, m.z - p.z) > PING_RANGE_M) return;
+      if (!s.throttle(uid, 'ping', this.config.chat.pingIntervalMs / 1000)) return;
+      this.broadcast('ping', {
+        userId: uid,
+        type: m.type,
+        x: m.x,
+        y: m.y,
+        z: m.z,
+        until: Date.now() + PING_TTL_MS,
+      });
+    });
+    play('emote', (s, uid, m) => {
+      const p = s.players.get(uid);
+      if (!p || p.life !== 'alive' || !s.throttle(uid, 'emote', EMOTE_INTERVAL_SEC)) return;
+      p.anim = 'emote';
+      this.broadcast('emote', { userId: uid, id: m.id });
+    });
+    // Phase 6: build, revive, vote.
 
     // Anything else (unknown or not-yet-implemented types) is ignored.
     this.onMessage('*', () => {});
@@ -276,15 +410,54 @@ export class SurvivalRoom extends Room<{
     return null;
   }
 
+  private async createRun(hostId: string) {
+    const db = services().db;
+    try {
+      this.runId = await db.createRun({
+        hostId,
+        mode: this.state.mode as 'solo' | 'coop',
+        difficulty: this.state.difficulty,
+        configVersionId: this.configId,
+        seed: randomInt(1, 2 ** 31 - 1),
+      });
+      this.sessionId = await db.createSession(this.runId, this.roomId);
+    } catch (e) {
+      log.error('run create failed', { roomId: this.roomId, ...errInfo(e) });
+    }
+  }
+
   private async startRun() {
     this.state.phase = 'cutscene';
     await this.lock();
     await this.releaseCode();
     await this.syncMetadata();
+    await this.runReady;
+    const players = [...this.state.players.values()].sort((a, b) => a.joinedAt - b.joinedAt);
+    this.sim = new Simulation({
+      config: this.config,
+      difficulty: this.state.difficulty as Difficulty,
+      seed: randomInt(1, 2 ** 31 - 1),
+      solo: this.state.mode === 'solo',
+      players: players.map((p) => ({ userId: p.userId, username: p.username, role: p.role })),
+    });
+    syncWorld(this.state, this.sim, true);
+    if (this.runId) {
+      try {
+        const db = services().db;
+        await db.setMembers(
+          this.runId,
+          players.map((p) => ({ userId: p.userId, role: p.role })),
+        );
+        await db.setRunStatus(this.runId, 'active');
+      } catch (e) {
+        log.error('run start persistence failed', { roomId: this.roomId, ...errInfo(e) });
+      }
+    }
     this.broadcast('run:starting', { configVersion: this.state.configVersion });
     log.info('run starting', {
       roomId: this.roomId,
-      players: this.state.players.size,
+      runId: this.runId,
+      players: players.length,
       configId: this.configId,
     });
     // Synced cutscene: everyone skips/finishes, or the timer moves the team on.
@@ -292,13 +465,54 @@ export class SurvivalRoom extends Room<{
   }
 
   private beginPlay() {
-    if (this.state.phase !== 'cutscene') return;
+    if (this.state.phase !== 'cutscene' || !this.sim) return;
     this.state.phase = 'playing';
     void this.syncMetadata();
-    // Phase 5: the simulation loop starts here.
+    this.setSimulationInterval((dtMs) => {
+      if (!this.sim) return;
+      // Clamp: a stalled event loop must not fast-forward stats in one giant step.
+      this.sim.tick(Math.min(dtMs, 250) / 1000);
+      this.flush();
+    }, TICK_MS);
+  }
+
+  /** Delivers queued simulation messages and mirrors state. */
+  private flush() {
+    const sim = this.sim;
+    if (!sim) return;
+    for (const o of sim.drainOut()) {
+      if (o.to === 'all') this.broadcast(o.type, o.payload);
+      else this.clientOf(o.to)?.send(o.type, o.payload);
+    }
+    syncWorld(this.state, sim);
+  }
+
+  private async flushLearning() {
+    if (!this.sim || !this.runId || !this.sim.learning.length) return;
+    const batch = this.sim.learning.splice(0, this.sim.learning.length);
+    try {
+      await services().db.insertLearning(batch.map((l) => ({ ...l, runId: this.runId! })));
+    } catch (e) {
+      log.warn('learning flush failed', { roomId: this.roomId, ...errInfo(e) });
+      this.sim.learning.unshift(...batch.slice(-500));
+    }
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
+
+  /** Own full bag is visible only through this client's StateView. */
+  private attachView(client: SurvivalClient) {
+    const p = this.playerOf(client);
+    if (!p) return;
+    client.view = new StateView();
+    client.view.add(p);
+    // Slots pushed later must flow to this view too.
+    client.view.subscribe(p.bag);
+  }
+
+  private clientOf(userId: string) {
+    return this.clients.find((x) => x.auth?.profile.userId === userId);
+  }
 
   private playerOf(c: SurvivalClient) {
     const uid = c.auth?.profile.userId;
@@ -347,7 +561,7 @@ export class SurvivalRoom extends Room<{
     }
   }
 
-  /** Suspensions, restrictions and the kill switch take effect mid-session. */
+  /** Suspensions, restrictions, chat restrictions and the kill switch apply mid-session. */
   private async recheckEligibility() {
     for (const c of this.clients) {
       const uid = c.auth?.profile.userId;
@@ -355,6 +569,7 @@ export class SurvivalRoom extends Room<{
       try {
         const el = await services().checkEligibility(uid);
         if (!el.ok) c.leave(RoomCode.ELIGIBILITY_LOST);
+        else c.auth!.profile = el.profile;
       } catch (e) {
         log.warn('eligibility recheck failed', { roomId: this.roomId, ...errInfo(e) });
       }
@@ -383,6 +598,11 @@ export class SurvivalRoom extends Room<{
       hostUsername: host?.username ?? '',
       createdAt: this.createdAt,
     });
+  }
+
+  /** Test hook: the live simulation (null before the run starts). */
+  get simulation() {
+    return this.sim;
   }
 }
 

@@ -4,7 +4,12 @@ import {
   SURVIVAL_PROTOCOL_VERSION,
   survivalConfigSchema,
 } from '@baha/shared/survival';
-import { memoryCodeStore, memoryLimiter } from '../src/services/live.ts';
+import {
+  memoryCodeStore,
+  memoryLimiter,
+  memoryModeration,
+  memoryPersistence,
+} from '../src/services/memory.ts';
 import type { Eligibility, Services } from '../src/services/types.ts';
 
 export const PORT = 2568; // @colyseus/testing always boots a Server instance here
@@ -21,6 +26,7 @@ export const U = {
 
 export interface FakeServices extends Services {
   eligible: Map<string, Eligibility>;
+  store: ReturnType<typeof memoryPersistence>['store'];
   setDisabled(on: boolean): void;
 }
 
@@ -36,13 +42,19 @@ export function fakeServices(): FakeServices {
           userId: id,
           username: `user_${name}`,
           avatar: { hat: 'cap_red', bad: 'x'.repeat(99) },
+          chatRestricted: name === 'p3',
+          chatMode: 'full' as const,
         },
       });
   }
   let disabled = false;
   const config = survivalConfigSchema.parse(DEFAULT_SURVIVAL_CONFIG);
+  const { db, store } = memoryPersistence();
   return {
     eligible,
+    store,
+    db,
+    moderation: memoryModeration(),
     setDisabled: (on) => {
       disabled = on;
     },

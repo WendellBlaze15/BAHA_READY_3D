@@ -41,6 +41,12 @@ describe('normal gameplay chat is never touched (no false positives)', () => {
     'stage 4/6 na ang bangka',
     'ulo ko masakit',
     'may gagamba sa bubong',
+    'saan ka na?',
+    'saan kayo nakatayo',
+    'punta tayo sa school',
+    'may picture frame dito',
+    'send mo yung tarp',
+    'nakatira tayo sa camp ngayon',
   ])('%s', (text) => {
     expect(f(text)).toMatchObject({ status: 'delivered', text });
   });
@@ -67,6 +73,15 @@ describe('personal info and contact are rejected', () => {
     ['contact_invite', 'discord tayo'],
     ['address', 'Blk 5 Lot 12 kami'],
     ['address', 'purok 3 bahay namin'],
+    ['location_request', 'saan ka nakatira?'],
+    ['location_request', 'taga saan ka'],
+    ['location_request', 'where do u live'],
+    ['location_request', 'anong address mo'],
+    ['location_request', 'anong school mo'],
+    ['location_request', 'saan ka nag-aaral'],
+    ['photo_request', 'send pic naman'],
+    ['photo_request', 'pakita mo mukha mo'],
+    ['photo_request', 'selfie mo'],
   ])('%s: %s', (hit, text) => {
     const r = f(text);
     expect(r.status).toBe('rejected');

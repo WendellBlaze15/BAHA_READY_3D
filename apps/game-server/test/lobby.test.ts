@@ -5,7 +5,7 @@ import { originAllowed, setPolicy } from '../src/policy.ts';
 import { AuthCode, RoomCode } from '../src/rooms/errors.ts';
 import type { SurvivalRoom } from '../src/rooms/SurvivalRoom.ts';
 import { normalizeCode } from '../src/services/codes.ts';
-import { memoryLimiter } from '../src/services/live.ts';
+import { memoryLimiter } from '../src/services/memory.ts';
 import { setServices } from '../src/services/index.ts';
 import {
   ADMIN_SECRET,

@@ -13,11 +13,19 @@ import { FILIPINO_WORDLIST, type FilWord } from './wordlist-fil.ts';
  * Survival team-chat filter (Section 17.1). Runs on the GAME SERVER for every message.
  * - Profanity (English + Filipino/Taglish, leetspeak): masked with ****, still delivered.
  * - Personal info / contact (links, emails, PH phone numbers, handles, "add mo ko sa fb",
- *   addresses): REJECTED, sender gets a friendly notice. (Anti-grooming, privacy.)
+ *   addresses, where-do-you-live / photo requests): REJECTED, sender gets a friendly notice. (Anti-grooming, privacy.)
  * - Plain text only: HTML/markdown stripped, repeated characters collapsed.
  */
 export type FilterHit =
-  'profanity' | 'url' | 'email' | 'phone' | 'handle' | 'contact_invite' | 'address';
+  | 'profanity'
+  | 'url'
+  | 'email'
+  | 'phone'
+  | 'handle'
+  | 'contact_invite'
+  | 'address'
+  | 'location_request'
+  | 'photo_request';
 
 export type FilterResult =
   | { status: 'delivered' | 'masked'; text: string; hits: FilterHit[]; maskedWords: number }
@@ -58,6 +66,15 @@ const PLATFORM_RE = new RegExp(String.raw`\b${PLATFORM}\b`, 'i');
 const INVITE_RE =
   /\b(?:(?:add|follow|pm|dm|text|txt|call|tawagan|message|msg|kontakin|contact)\s+(?:mo\s+)?(?:me|ako|ko|kami)|(?:pm|dm)\s+(?:mo|kita|me))\b/i;
 const ADDRESS_RE = /\b(?:blk|block|lot|purok|sitio)\.?\s*#?\s*\d+/i;
+/**
+ * Grooming red flags: asking where someone lives or studies. In-game location talk ("saan ka
+ * na?", "punta tayo sa school") stays allowed — only home/school-of-the-person questions match.
+ */
+const LOCATION_RE =
+  /\b(?:sa?an\s+(?:ka|kayo)\s+(?:naka\s*tira|tumitira)|taga\s*sa?an\s+(?:ka|kayo)|where\s+(?:do\s+)?(?:you|u)\s+live|(?:ano(?:ng)?|what'?s?|wats)\s+(?:(?:ang|is)\s+)?(?:your|ur|yung)?\s*address|address\s+(?:mo|nyo|ninyo)|(?:ano(?:ng)?|saang?)\s+(?:school|eskwelahan|paaralan)\s+(?:mo|ka|nyo)|sa?an\s+(?:ka|kayo)\s+nag[-\s]?aaral|what\s+school\s+(?:do\s+)?(?:you|u))\b/i;
+/** Requests for photos of the person. */
+const PHOTO_RE =
+  /\b(?:(?:send|padala|pasend|sendan)\s+(?:mo\s+)?(?:(?:me|ako|ng)\s+)?(?:pic|pics|picture|photo|selfie|litrato)|pakita\s+(?:mo\s+)?(?:ang\s+)?(?:mukha|itsura)|(?:pic|picture|photo|selfie)\s+(?:mo|nyo))\b/i;
 
 /** Normalizes leetspeak for detection only (the delivered text keeps the user's characters). */
 function normalize(s: string) {
@@ -87,6 +104,8 @@ export function filterChatMessage(
   if (HANDLE_RE.test(n)) hits.push('handle');
   if (PLATFORM_RE.test(n) || INVITE_RE.test(n)) hits.push('contact_invite');
   if (ADDRESS_RE.test(n)) hits.push('address');
+  if (LOCATION_RE.test(n)) hits.push('location_request');
+  if (PHOTO_RE.test(n)) hits.push('photo_request');
   if (hits.length) return { status: 'rejected', reasonKey: 'personal_info', hits };
 
   const matcher = opts.extraWords?.length

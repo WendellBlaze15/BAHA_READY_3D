@@ -28,6 +28,24 @@ To point the local web app at a local server, set `NEXT_PUBLIC_GAME_SERVER_URL=w
   routes do RBAC + audit logging before calling it. `/health` exposes liveness only.
 - Logs are JSON lines with user/room ids only — never tokens, chat text or emails.
 
+## Simulation (Phase 5)
+
+`src/sim/simulation.ts` is a network-free, unit-tested class; the room feeds it validated
+intents (verified user id only) and runs `tick()` at 20 Hz, then `rooms/sync.ts` mirrors it into
+Colyseus state. It owns time/day-night, seeded weather and storms (water rises), stats and
+status effects (Lakas at 0 locks sprint/jump only — walking is never slowed), movement
+validation (depth bands, sprint only while server stamina allows, jump envelope, client-clock
+clamp; impossible moves get a `correction`, repeated ones flag the run), axe/shove (no friendly
+fire), loot holds (seeded per container × day), bag/drop/give, logged camp storage and timed
+crafting. ~0.02 ms per 5-player tick.
+
+Chat (`rooms/chat-handler.ts`): kill switch → admin chat restriction → player's chat mode →
+auto-mute (Redis, escalating 10/30/120 min, repeat offenders flagged) → 1.5 s / 20 per min /
+duplicate limits → shared filter (profanity masked; links, numbers, handles, addresses,
+where-do-you-live and photo requests rejected) → stored in `survival_chat_messages` BEFORE
+delivery → delivered only to teammates who haven't muted/blocked the sender. Reports attach
+message ids + context; personal-info reports are high priority.
+
 ## Environment
 
 | Var | Notes |
