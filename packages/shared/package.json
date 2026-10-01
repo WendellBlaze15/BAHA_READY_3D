@@ -8,6 +8,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./game": "./src/game/index.ts",
+    "./survival": "./src/survival/index.ts",
     "./*": "./src/*.ts"
   },
   "scripts": {
@@ -16,6 +17,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "obscenity": "0.4.6",
     "zod": "^4.6.5"
   },
   "devDependencies": {
