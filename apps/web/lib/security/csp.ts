@@ -5,10 +5,20 @@
  * DECISION: style-src keeps 'unsafe-inline' — Radix/motion/R3F set inline style attributes,
  * which nonces can't cover; style injection is far lower risk than script injection.
  */
-export function buildCsp(nonce: string, opts: { dev: boolean; supabaseUrl: string }) {
+export function buildCsp(
+  nonce: string,
+  opts: { dev: boolean; supabaseUrl: string; gameServerUrl?: string },
+) {
   const sb = new URL(opts.supabaseUrl);
   const supabase = `${sb.protocol}//${sb.host}`;
   const supabaseWs = `wss://${sb.host}`;
+  // Survival game server: HTTP matchmaking + WebSocket on the same host.
+  const game: string[] = [];
+  if (opts.gameServerUrl) {
+    const g = new URL(opts.gameServerUrl);
+    const secure = g.protocol === 'wss:' || g.protocol === 'https:';
+    game.push(`${secure ? 'https' : 'http'}://${g.host}`, `${secure ? 'wss' : 'ws'}://${g.host}`);
+  }
   const directives: Record<string, string[]> = {
     'default-src': ["'self'"],
     'script-src': [
@@ -21,7 +31,7 @@ export function buildCsp(nonce: string, opts: { dev: boolean; supabaseUrl: strin
     'style-src': ["'self'", "'unsafe-inline'"],
     'img-src': ["'self'", 'data:', 'blob:', supabase],
     'font-src': ["'self'", 'data:'],
-    'connect-src': ["'self'", supabase, supabaseWs, ...(opts.dev ? ['ws:'] : [])],
+    'connect-src': ["'self'", supabase, supabaseWs, ...game, ...(opts.dev ? ['ws:'] : [])],
     'media-src': ["'self'", 'data:', 'blob:'],
     'worker-src': ["'self'", 'blob:'],
     'manifest-src': ["'self'"],

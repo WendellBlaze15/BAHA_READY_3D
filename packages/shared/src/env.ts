@@ -14,6 +14,8 @@ export const publicEnvSchema = z.object({
   NEXT_PUBLIC_SENTRY_DSN: optional,
   NEXT_PUBLIC_POSTHOG_KEY: optional,
   NEXT_PUBLIC_POSTHOG_HOST: optional,
+  /** Survival game server (wss://…). Unset = Survival UI shows "not available yet". */
+  NEXT_PUBLIC_GAME_SERVER_URL: optional,
 });
 
 /** Server-only vars: must never reach the client bundle. */
@@ -38,6 +40,12 @@ export const serverEnvSchema = z.object({
   SENTRY_AUTH_TOKEN: optional,
   WEATHER_LAT: z.coerce.number().min(-90).max(90).default(14.23),
   WEATHER_LON: z.coerce.number().min(-180).max(180).default(121.36),
+  /** Survival game server admin API (https://…) + its shared secret (server-to-server only). */
+  GAME_SERVER_HTTP_URL: optional,
+  GAME_SERVER_ADMIN_SECRET: optional.refine(
+    (v) => v === undefined || v.length >= 32,
+    'min 32 chars',
+  ),
 });
 
 /** Keys that must never appear in client bundles (checked in CI). */

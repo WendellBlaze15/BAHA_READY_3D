@@ -46,3 +46,6 @@ apps/web/public/sw.js.map
 apps/web/public/swe-worker-*.js
 playwright-report
 test-results
+
+# temp Railway API helpers (never commit)
+scripts/.rw-*

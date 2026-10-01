@@ -71,6 +71,7 @@ export default async function middleware(incoming: NextRequest) {
   const csp = buildCsp(nonce, {
     dev: process.env.NODE_ENV !== 'production',
     supabaseUrl: SUPABASE_URL,
+    gameServerUrl: process.env.NEXT_PUBLIC_GAME_SERVER_URL || undefined,
   });
   const reqHeaders = new Headers(incoming.headers);
   reqHeaders.set('x-nonce', nonce);
