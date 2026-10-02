@@ -28,6 +28,8 @@ export interface SimPlayer {
   equip: { hand: string | null; body: string | null; feet: string | null };
   /** Last accepted movement sample (t = effective client seconds). */
   last: { x: number; y: number; z: number; t: number | null; at: number };
+  /** Ground last stood on (jump envelope reference for ~1.2 s after leaving it). */
+  support: { y: number; at: number };
   /** Clock baseline (server − client seconds): bounds how far a client may run "ahead". */
   minOffset: number | null;
   offsetAt: number;

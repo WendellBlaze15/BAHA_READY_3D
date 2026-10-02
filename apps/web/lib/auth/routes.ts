@@ -6,6 +6,8 @@ export type RouteRule =
   | { kind: 'guest-only' }
   | { kind: 'auth' }
   | { kind: 'player' }
+  /** Survival Mode: players only (not facilitators/admins), live-eligible (claim + server checks). */
+  | { kind: 'survival' }
   | { kind: 'staff'; permission?: Permission; role?: 'super_admin' };
 
 const PLAYER_PREFIXES = [
@@ -38,6 +40,7 @@ export function ruleFor(path: string): RouteRule {
   if (matches(path, '/admin')) return { kind: 'staff', permission: 'content.manage' };
   if (matches(path, '/facilitator')) return { kind: 'staff', permission: 'groups.manage' };
   if (GUEST_PLAYABLE.some((p) => matches(path, p))) return { kind: 'public' };
+  if (matches(path, '/survival')) return { kind: 'survival' };
   if (matches(path, '/play') || PLAYER_PREFIXES.some((p) => matches(path, p)))
     return { kind: 'player' };
   return { kind: 'public' };
@@ -85,6 +88,10 @@ export function decide(
     return { action: 'redirect', to: `/onboarding?next=${next}`, reason: 'onboarding' };
 
   if (rule.kind === 'player') return { action: 'allow' };
+  if (rule.kind === 'survival')
+    return claims.can_play_survival
+      ? { action: 'allow' }
+      : { action: 'redirect', to: '/home?notice=survival', reason: 'survival-not-eligible' };
 
   // Staff routes
   if (rule.role && claims.user_role !== rule.role) {

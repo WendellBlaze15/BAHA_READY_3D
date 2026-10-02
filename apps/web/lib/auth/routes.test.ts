@@ -40,6 +40,22 @@ describe('route rules', () => {
   });
 });
 
+describe('survival access (players only)', () => {
+  it('classifies /survival', () => {
+    expect(ruleFor('/survival').kind).toBe('survival');
+    expect(ruleFor('/survival/room/abc').kind).toBe('survival');
+  });
+  it('allows eligible players and refuses everyone else', () => {
+    expect(decide('/survival', { ...player, can_play_survival: true }, opts).action).toBe('allow');
+    for (const c of [player, facilitator, admin, superAdmin])
+      expect(decide('/survival', { ...c, can_play_survival: false }, opts)).toMatchObject({
+        action: 'redirect',
+        reason: 'survival-not-eligible',
+      });
+    expect(decide('/survival', null, opts)).toMatchObject({ reason: 'unauthenticated' });
+  });
+});
+
 describe('guard decisions', () => {
   it('sends guests to sign-in with next', () => {
     expect(decide('/home', null, opts)).toEqual({

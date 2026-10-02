@@ -2493,6 +2493,10 @@ export type Database = {
         Args: { p_attempt_id: string; p_result: Json };
         Returns: Json;
       };
+      finish_survival_run: {
+        Args: { p_result: Json; p_run_id: string };
+        Returns: Json;
+      };
       flagged_attempts: {
         Args: { p_include_voided?: boolean };
         Returns: {
@@ -2638,6 +2642,10 @@ export type Database = {
       };
       moderate_attempt: {
         Args: { p_action: string; p_attempt_id: string; p_reason: string };
+        Returns: undefined;
+      };
+      notify_survival_resumed: {
+        Args: { p_by: string; p_code: string; p_day: number; p_run_id: string };
         Returns: undefined;
       };
       notify_user: {

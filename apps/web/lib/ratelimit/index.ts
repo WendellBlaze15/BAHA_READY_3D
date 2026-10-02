@@ -19,6 +19,9 @@ export type RateAction =
   | 'content_write'
   | 'leaderboard_read'
   | 'weather'
+  | 'survival_join'
+  | 'survival_resume'
+  | 'survival_leave'
   | 'general';
 
 type LimitCfg = { limit: number; window: Duration };
@@ -38,6 +41,10 @@ const DEFAULTS: Record<RateAction, LimitCfg> = {
   content_write: { limit: 120, window: '1 m' },
   leaderboard_read: { limit: 60, window: '1 m' },
   weather: { limit: 30, window: '1 m' },
+  // Survival (Section 20.3): join attempts incl. wrong codes, resume, leaving a run.
+  survival_join: { limit: 20, window: '10 m' },
+  survival_resume: { limit: 10, window: '10 m' },
+  survival_leave: { limit: 10, window: '1 h' },
   general: { limit: 300, window: '5 m' },
 };
 

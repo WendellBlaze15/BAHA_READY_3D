@@ -27,7 +27,7 @@ export const PlayerState = schema(
     isHost: t.boolean(),
     /** Join order — host transfer goes to the earliest remaining player. */
     joinedAt: t.number(),
-    /** JSON avatar config (hat/accessory keys only — no free text). */
+    /** JSON avatar config (AvatarConfig keys only, validated short tokens — no free text). */
     avatar: t.string(),
     /** Own bag only (StateView); kept in the first 32 fields for the fast filter path. */
     bag: t.array(BagSlot).view(),

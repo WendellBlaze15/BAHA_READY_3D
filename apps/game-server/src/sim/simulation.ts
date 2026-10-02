@@ -69,6 +69,8 @@ const VIOLATION_FLAG_COUNT = 10;
 const CLIENT_AHEAD_SLACK_SEC = 0.25;
 /** Max rate the clock baseline may move earlier (s per s) — bounds clock-speed cheats to 5%. */
 const CLOCK_DRIFT_RATE = 0.05;
+/** How long a roof you stepped/jumped off still counts as your floor for the jump envelope. */
+const SUPPORT_MEMORY_SEC = 1.2;
 /** Stats are advanced in 1 s steps (in-game minutes vary by difficulty). */
 const STAT_STEP_SEC = 1;
 const NEAR_FIRE_M = 4;
@@ -212,6 +214,7 @@ export class Simulation {
       bag: emptyBag(this.cfg.bag),
       equip: { hand: null, body: null, feet: null },
       last: { x: spawn.x, y, z: spawn.z, t: null, at: this.time },
+      support: { y, at: this.time },
       minOffset: null,
       offsetAt: 0,
       speed: 0,
@@ -367,6 +370,7 @@ export class Simulation {
     p.z = z;
     p.y = Math.max(y, groundAt(this.map, x, z));
     p.last = { x, y: p.y, z, t: null, at: this.time };
+    p.support = { y: groundAt(this.map, x, z), at: this.time };
     p.minOffset = null;
     this.send(p.userId, 'correction', { x, y: p.y, z, reason: 'placed' });
   }
@@ -457,6 +461,7 @@ export class Simulation {
         sprinting: sprintOk,
         onRaft: false,
         swimSpeedMul: this.perk(p, 'swimSpeedMul'),
+        supportY: this.time - p.support.at <= SUPPORT_MEMORY_SEC ? p.support.y : undefined,
       },
     );
     p.rotY = m.rotY;
@@ -474,6 +479,8 @@ export class Simulation {
     p.z = m.z;
     p.anim = m.anim;
     p.last = { x: m.x, y: m.y, z: m.z, t, at: this.time };
+    const g = groundAt(this.map, m.x, m.z);
+    if (m.y <= g + 0.25) p.support = { y: g, at: this.time };
     if (p.channel && Math.hypot(p.x - p.channel.x, p.z - p.channel.z) > CHANNEL_CANCEL_M)
       this.cancelChannel(p, 'moved');
   }

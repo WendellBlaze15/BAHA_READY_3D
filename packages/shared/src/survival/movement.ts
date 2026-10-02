@@ -39,6 +39,11 @@ export type MoveContext = {
   onRaft: boolean;
   /** Role perk (Scout ×1.2; solo gets half strength). */
   swimSpeedMul: number;
+  /**
+   * Highest ground the player stood on in the last ~1.2 s (jumping or stepping off a roof
+   * edge keeps that roof as the reference for the jump envelope).
+   */
+  supportY?: number;
 };
 
 export type MoveVerdict =
@@ -78,9 +83,16 @@ export function validateMove(prev: MoveSample, next: MoveSample, ctx: MoveContex
     return { ok: false, reason: 'too_fast', band };
 
   // Vertical envelope: never above ground + jump apex (with slack); swimmers float at the surface.
-  const ground = Math.max(groundAt(ctx.map, next.x, next.z), groundAt(ctx.map, prev.x, prev.z));
+  const ground = Math.max(
+    groundAt(ctx.map, next.x, next.z),
+    groundAt(ctx.map, prev.x, prev.z),
+    ctx.supportY ?? -Infinity,
+  );
   const floor = Math.max(ground, band === 'swim' ? ctx.waterLevel : ground);
-  if (next.y > floor + JUMP_APEX_M * 1.3 + 0.3) return { ok: false, reason: 'flying', band };
+  // Above the envelope is only legal while falling (stepping off a roof); hovering or rising
+  // there is flying.
+  if (next.y > floor + JUMP_APEX_M * 1.3 + 0.3 && !(next.y < prev.y - 0.01))
+    return { ok: false, reason: 'flying', band };
 
   return { ok: true, band };
 }

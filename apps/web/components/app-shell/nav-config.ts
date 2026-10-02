@@ -24,6 +24,7 @@ import {
   UserPlus,
   Wrench,
   Layers,
+  LifeBuoy,
   ServerCog,
   Siren,
 } from 'lucide-react';
@@ -51,6 +52,9 @@ const PLAYER_MORE: NavItem[] = [
   { href: '/settings', labelKey: 'nav.settings', icon: Settings },
   { href: '/live', labelKey: 'nav.joinLive', icon: Radio },
 ];
+
+/** Survival Mode: eligible players only (claim; the route + game server re-check live). */
+const SURVIVAL: NavItem = { href: '/survival', labelKey: 'nav.survival', icon: LifeBuoy };
 
 const APPLY: NavItem = { href: '/apply', labelKey: 'nav.apply', icon: UserPlus };
 
@@ -83,7 +87,7 @@ const SUPER: NavItem[] = [
 
 export function sectionsFor(claims: AppClaims): NavSection[] {
   const can = (p: Permission) => hasPermission(claims, p);
-  const play = [...PRIMARY_TABS, ...PLAYER_MORE];
+  const play = [...PRIMARY_TABS, ...(claims.can_play_survival ? [SURVIVAL] : []), ...PLAYER_MORE];
   if (!can('groups.manage') && claims.user_role === 'player') play.push(APPLY);
   const sections: NavSection[] = [{ titleKey: 'nav.sectionPlay', items: play }];
   if (can('groups.manage'))

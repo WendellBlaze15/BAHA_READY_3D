@@ -87,8 +87,9 @@ function useAutoSave() {
   return { save, state };
 }
 
-export function SettingsPage() {
+export function SettingsPage({ survival = false }: { survival?: boolean }) {
   const t = useTranslations('settingsPage');
+  const ts = useTranslations('survival.settings');
   const tp = useTranslations('pwa');
   const tc = useTranslations('common');
   const { data: settings } = useSettings();
@@ -289,6 +290,27 @@ export function SettingsPage() {
       <Section title={t('privacyTitle')}>
         <LeaderboardToggle />
       </Section>
+
+      {survival && (
+        <Section title={ts('title')} hint={ts('chatHint')}>
+          <RadioGroup
+            value={local.survival_chat_mode}
+            onValueChange={(v) => set('survival_chat_mode', v, true)}
+            className="grid gap-2"
+            aria-label={ts('chatMode')}
+          >
+            {(['full', 'quick_only', 'off'] as const).map((m) => (
+              <Label
+                key={m}
+                htmlFor={`sc-${m}`}
+                className="bg-background flex min-h-11 items-center gap-2 rounded-lg border px-3"
+              >
+                <RadioGroupItem id={`sc-${m}`} value={m} /> {ts(`chat.${m}`)}
+              </Label>
+            ))}
+          </RadioGroup>
+        </Section>
+      )}
 
       <AccountSection username={profile.username as string} />
     </div>

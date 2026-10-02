@@ -35,6 +35,7 @@ export async function AuthedShell({ children }: { children: React.ReactNode }) {
         permissions: claims.permissions,
         user_status: claims.user_status,
         onboarded: claims.onboarded,
+        can_play_survival: claims.can_play_survival,
       }}
       profile={profile}
       settings={settings}

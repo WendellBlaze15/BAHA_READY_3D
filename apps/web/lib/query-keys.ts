@@ -72,4 +72,12 @@ export const qk = {
     emails: () => ['admin', 'emails'] as const,
   },
   system: { public: () => ['system', 'public'] as const },
+  survival: {
+    all: () => ['survival'] as const,
+    runs: () => ['survival', 'runs'] as const,
+    config: (version: number | null) => ['survival', 'config', version] as const,
+    result: (runId: string) => ['survival', 'result', runId] as const,
+    board: (difficulty: string, team: string, period: string) =>
+      ['survival', 'board', difficulty, team, period] as const,
+  },
 } as const;

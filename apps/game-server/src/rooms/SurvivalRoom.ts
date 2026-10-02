@@ -928,13 +928,13 @@ function pickAvatar(a: Record<string, unknown>) {
   for (const k of [
     'skin',
     'hair',
-    'hairColor',
+    'hairStyle',
     'shirt',
     'pants',
     'shoes',
     'hat',
     'accessory',
-    'preset',
+    'face',
   ]) {
     const v = a[k];
     if (typeof v === 'string' && /^[a-z0-9_#-]{1,32}$/i.test(v)) out[k] = v;

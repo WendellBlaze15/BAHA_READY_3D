@@ -6,6 +6,7 @@ import { StormSignalMeter } from '@/components/storm-signal-meter/storm-signal-m
 import { DioramaPoster } from '@/components/landing/diorama-poster';
 import { getClaims } from '@/lib/auth/session';
 import { homeFor } from '@/lib/auth/claims';
+import { SurvivalTeaser } from '@/components/survival/teaser';
 
 export default async function LandingPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -50,6 +51,12 @@ export default async function LandingPage({ params }: { params: Promise<{ locale
           <DioramaPoster />
         </div>
       </section>
+
+      {!claims && (
+        <div className="mx-auto mb-10 max-w-6xl px-4">
+          <SurvivalTeaser variant="guest" />
+        </div>
+      )}
 
       <section className="mx-auto max-w-6xl px-4" aria-labelledby="features-title">
         <h2 id="features-title" className="mb-6 text-2xl font-bold">
