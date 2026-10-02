@@ -131,7 +131,9 @@ export function Lobby() {
                     )}
                     <span className="truncate">{p.username}</span>
                     {p.userId === myId && (
-                      <span className="text-muted-foreground text-xs">({t('lobby.you')})</span>
+                      <span className="text-muted-foreground shrink-0 text-xs">
+                        ({t('lobby.you')})
+                      </span>
                     )}
                   </p>
                   <p className="text-muted-foreground truncate text-sm">

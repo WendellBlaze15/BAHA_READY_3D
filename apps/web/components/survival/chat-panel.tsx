@@ -89,7 +89,11 @@ export function ChatPanel({ overlay }: { overlay: boolean }) {
 
   const Line = ({ l }: { l: ChatLine }) => {
     if (!l.senderId)
-      return <li className="text-signal-amber text-sm italic">{say(l.key ?? '', l.params)}</li>;
+      return (
+        <li className="dark:text-signal-amber text-sm text-amber-800 italic">
+          {say(l.key ?? '', l.params)}
+        </li>
+      );
     if (muted.has(l.senderId)) return null;
     const who = names?.[l.senderId];
     const mine = l.senderId === myId;
@@ -180,20 +184,33 @@ export function ChatPanel({ overlay }: { overlay: boolean }) {
           size="lg"
           variant={overlay ? 'secondary' : 'default'}
           className={cn(
-            'fixed z-[60] h-12 rounded-full shadow-lg',
+            'fixed z-[60] rounded-full shadow-lg',
+            // In-game: a fixed-size round button so it never pushes into the HUD menu.
             overlay
-              ? 'top-[max(0.5rem,env(safe-area-inset-top))] right-[max(0.5rem,env(safe-area-inset-right))]'
-              : 'right-4 bottom-20 sm:bottom-6',
+              ? 'top-[max(0.5rem,env(safe-area-inset-top))] right-[max(0.5rem,env(safe-area-inset-right))] size-10 p-0'
+              : 'right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] h-12 lg:bottom-6',
           )}
-          aria-label={t('chat.open')}
+          aria-label={
+            unread > 0
+              ? `${t('chat.open')} (${t('chat.unread', { count: unread })})`
+              : t('chat.open')
+          }
         >
           <MessageCircle aria-hidden />
-          <span className="hidden sm:inline">{t('chat.title')}</span>
-          {unread > 0 && (
-            <span className="bg-destructive rounded-full px-1.5 text-xs text-white">
-              {t('chat.unread', { count: unread })}
-            </span>
-          )}
+          {!overlay && <span className="hidden sm:inline">{t('chat.title')}</span>}
+          {unread > 0 &&
+            (overlay ? (
+              <span
+                className="bg-destructive absolute -top-1 -right-1 grid min-w-5 place-items-center rounded-full px-1 text-[11px] leading-5 font-bold text-white"
+                aria-hidden
+              >
+                {unread > 9 ? '9+' : unread}
+              </span>
+            ) : (
+              <span className="bg-destructive rounded-full px-1.5 text-xs text-white">
+                {t('chat.unread', { count: unread })}
+              </span>
+            ))}
         </Button>
       )}
 

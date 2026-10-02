@@ -8,7 +8,8 @@
     "start": "node --import tsx src/index.ts",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "loadtest": "node --import tsx scripts/loadtest.ts"
   },
   "dependencies": {
     "@baha/shared": "workspace:*",

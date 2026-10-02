@@ -3,6 +3,8 @@
 //   pnpm setup check-env       → report missing keys (names only)
 //   pnpm setup supabase-auth   → configure Supabase Auth (SMTP, OTP, templates, MFA, hooks)
 //   pnpm setup seed-staff      → create/refresh admin + super admin accounts
+//   pnpm run setup railway     → Survival game server on Railway (trial credits; idempotent)
+//   pnpm run setup railway-deploy → build + deploy apps/game-server, then check /health
 // Secret VALUES are never printed; only key names and ✔/✘.
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -626,6 +628,196 @@ async function functionsSecrets() {
   );
 }
 
+// ── Railway (Survival game server) ────────────────────────────────────
+// Idempotent: finds or creates project `baha-ready-game` / service `game-server` (Singapore,
+// 1 replica, /health check, sleeps when idle), upserts its variables (values never printed),
+// ensures a public domain, records the ids in git-ignored scripts/.rw-ids.json and reports the
+// remaining trial credits. Trial credits only — this never changes the plan or adds add-ons.
+const RW_IDS = path.join(ROOT, 'scripts', '.rw-ids.json');
+const RW_PROJECT = 'baha-ready-game';
+const RW_SERVICE = 'game-server';
+
+async function rw<T = any>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
+  const r = await fetch('https://backboard.railway.com/graphql/v2', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      authorization: `Bearer ${env('RAILWAY_API_TOKEN')}`,
+    },
+    body: JSON.stringify({ query, variables }),
+  });
+  const j = (await r.json()) as { data?: T; errors?: { message: string }[] };
+  if (j.errors?.length) throw new Error(`Railway: ${j.errors.map((e) => e.message).join('; ')}`);
+  return j.data as T;
+}
+
+type Edges<T> = { edges: { node: T }[] };
+async function railway() {
+  if (!env('RAILWAY_API_TOKEN'))
+    return log('railway', 'warn', 'RAILWAY_API_TOKEN not set — skipped (👤 create a token)');
+  if (!env('GAME_SERVER_ADMIN_SECRET'))
+    setEnvValue('GAME_SERVER_ADMIN_SECRET', crypto.randomBytes(32).toString('hex'));
+
+  const { projects } = await rw<{
+    projects: Edges<{
+      id: string;
+      name: string;
+      workspaceId: string;
+      environments: Edges<{ id: string; name: string }>;
+      services: Edges<{ id: string; name: string }>;
+    }>;
+  }>(
+    `{ projects { edges { node { id name workspaceId
+        environments { edges { node { id name } } }
+        services { edges { node { id name } } } } } } }`,
+  );
+  let project = projects.edges.map((e) => e.node).find((p) => p.name === RW_PROJECT);
+  let projectId = project?.id;
+  let environmentId = project?.environments.edges.find((e) => e.node.name === 'production')?.node
+    .id;
+  if (!projectId) {
+    const workspaceId = env('RAILWAY_WORKSPACE_ID');
+    if (!workspaceId)
+      return log('railway', 'fail', 'project missing and RAILWAY_WORKSPACE_ID not set');
+    const c = await rw<{
+      projectCreate: { id: string; environments: Edges<{ id: string; name: string }> };
+    }>(
+      `mutation($i: ProjectCreateInput!) { projectCreate(input: $i) {
+         id environments { edges { node { id name } } } } }`,
+      { i: { name: RW_PROJECT, workspaceId, defaultEnvironmentName: 'production' } },
+    );
+    projectId = c.projectCreate.id;
+    environmentId = c.projectCreate.environments.edges[0]?.node.id;
+    project = undefined;
+  }
+  if (!environmentId) return log('railway', 'fail', 'no production environment');
+  let serviceId = project?.services.edges.find((e) => e.node.name === RW_SERVICE)?.node.id;
+  if (!serviceId) {
+    const s = await rw<{ serviceCreate: { id: string } }>(
+      `mutation($i: ServiceCreateInput!) { serviceCreate(input: $i) { id } }`,
+      { i: { projectId, environmentId, name: RW_SERVICE } },
+    );
+    serviceId = s.serviceCreate.id;
+  }
+
+  const origins = [
+    ...new Set(
+      [env('PRODUCTION_URL'), env('NEXT_PUBLIC_APP_URL')].filter(
+        (o): o is string => !!o && !o.includes('localhost'),
+      ),
+    ),
+  ].join(',');
+  const variables: Record<string, string | undefined> = {
+    NODE_ENV: 'production',
+    PORT: '2567',
+    RAILWAY_DOCKERFILE_PATH: 'apps/game-server/Dockerfile',
+    SUPABASE_URL: env('NEXT_PUBLIC_SUPABASE_URL'),
+    SUPABASE_SERVICE_ROLE_KEY: env('SUPABASE_SERVICE_ROLE_KEY'),
+    UPSTASH_REDIS_REST_URL: env('UPSTASH_REDIS_REST_URL'),
+    UPSTASH_REDIS_REST_TOKEN: env('UPSTASH_REDIS_REST_TOKEN'),
+    GAME_SERVER_ADMIN_SECRET: env('GAME_SERVER_ADMIN_SECRET'),
+    ALLOWED_ORIGINS: origins || undefined,
+  };
+  const missing = Object.entries(variables)
+    .filter(([, v]) => !v)
+    .map(([k]) => k);
+  if (missing.length) return log('railway', 'fail', `missing: ${missing.join(', ')}`);
+  await rw(`mutation($i: VariableCollectionUpsertInput!) { variableCollectionUpsert(input: $i) }`, {
+    i: { projectId, environmentId, serviceId, variables, skipDeploys: true },
+  });
+  await rw(
+    `mutation($s: String!, $e: String!, $i: ServiceInstanceUpdateInput!) {
+       serviceInstanceUpdate(serviceId: $s, environmentId: $e, input: $i) }`,
+    {
+      s: serviceId,
+      e: environmentId,
+      i: {
+        multiRegionConfig: { 'asia-southeast1-eqsg3a': { numReplicas: 1 } },
+        healthcheckPath: '/health',
+        healthcheckTimeout: 120,
+        restartPolicyType: 'ON_FAILURE',
+        restartPolicyMaxRetries: 5,
+        sleepApplication: true,
+        drainingSeconds: 30,
+        dockerfilePath: 'apps/game-server/Dockerfile',
+      },
+    },
+  );
+  const d = await rw<{ domains: { serviceDomains: { domain: string }[] } }>(
+    `query($p: String!, $e: String!, $s: String!) {
+       domains(projectId: $p, environmentId: $e, serviceId: $s) { serviceDomains { domain } } }`,
+    { p: projectId, e: environmentId, s: serviceId },
+  );
+  let domain = d.domains.serviceDomains[0]?.domain;
+  if (!domain) {
+    const c = await rw<{ serviceDomainCreate: { domain: string } }>(
+      `mutation($i: ServiceDomainCreateInput!) { serviceDomainCreate(input: $i) { domain } }`,
+      { i: { serviceId, environmentId, targetPort: 2567 } },
+    );
+    domain = c.serviceDomainCreate.domain;
+  }
+  fs.writeFileSync(
+    RW_IDS,
+    JSON.stringify({ projectId, environmentId, serviceId, domain }, null, 2),
+  );
+  if (!env('NEXT_PUBLIC_GAME_SERVER_URL'))
+    setEnvValue('NEXT_PUBLIC_GAME_SERVER_URL', `wss://${domain}`);
+  if (!env('GAME_SERVER_HTTP_URL')) setEnvValue('GAME_SERVER_HTTP_URL', `https://${domain}`);
+  log(
+    'railway',
+    'ok',
+    `${RW_PROJECT}/${RW_SERVICE} (Singapore ×1, sleeps when idle) · ${Object.keys(variables).length} vars · https://${domain}`,
+  );
+
+  const ws = env('RAILWAY_WORKSPACE_ID') ?? project?.workspaceId;
+  if (ws) {
+    const c = await rw<{
+      workspace: { customer: { remainingUsageCreditBalance: number; creditBalance: number } };
+    }>(
+      `query($id: String!) { workspace(workspaceId: $id) {
+         customer { creditBalance remainingUsageCreditBalance } } }`,
+      { id: ws },
+    ).catch(() => null);
+    if (c)
+      log(
+        'railway:credits',
+        'ok',
+        `$${c.workspace.customer.remainingUsageCreditBalance.toFixed(2)} of $${c.workspace.customer.creditBalance} trial credits left`,
+      );
+  }
+}
+
+/** Builds and deploys apps/game-server from the local checkout (Railway CLI), then checks /health. */
+async function railwayDeploy() {
+  if (!fs.existsSync(RW_IDS))
+    return log('railway-deploy', 'fail', 'run `pnpm run setup railway` first');
+  const ids = JSON.parse(fs.readFileSync(RW_IDS, 'utf8'));
+  const { spawnSync } = await import('node:child_process');
+  const r = spawnSync(
+    'npx',
+    [
+      '-y',
+      '@railway/cli@latest',
+      'up',
+      '--ci',
+      '-p',
+      ids.projectId,
+      '-e',
+      ids.environmentId,
+      '-s',
+      ids.serviceId,
+    ],
+    { cwd: ROOT, stdio: 'inherit', shell: process.platform === 'win32', env: process.env },
+  );
+  if (r.status !== 0) return log('railway-deploy', 'fail', `railway up exited ${r.status}`);
+  for (let i = 0; i < 30; i++) {
+    const h = await fetch(`https://${ids.domain}/health`).catch(() => null);
+    if (h?.ok) return log('railway-deploy', 'ok', `deployed · https://${ids.domain}/health ok`);
+    await new Promise((res) => setTimeout(res, 5000));
+  }
+  log('railway-deploy', 'fail', 'deployed but /health did not answer');
+}
+
 // ── main ──────────────────────────────────────────────────────────────
 const steps: Record<string, () => unknown> = {
   'check-env': checkEnv,
@@ -637,6 +829,8 @@ const steps: Record<string, () => unknown> = {
   'functions-secrets': functionsSecrets,
   brevo,
   'email-pipeline': emailPipeline,
+  railway,
+  'railway-deploy': railwayDeploy,
 };
 
 const requested = process.argv.slice(2);

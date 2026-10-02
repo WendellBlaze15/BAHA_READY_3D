@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { assertSameOrigin, fail, json, parseBody, route } from '@/lib/api/http';
 import { requireStaff } from '@/lib/auth/staff';
+import { rateLimit } from '@/lib/ratelimit';
 
 export const runtime = 'nodejs';
 
@@ -12,6 +13,7 @@ export const POST = route<{ params: Promise<{ id: string }> }>(async (req, ctx) 
   const { supabase, userId } = await requireStaff('survival.reports.review');
   const { id } = await ctx.params;
   if (!/^[0-9a-f-]{36}$/.test(id)) throw fail('NOT_FOUND', 'errors.not_found');
+  await rateLimit('content_write', userId);
   await parseBody(req, schema);
   const { data, error } = await supabase
     .from('survival_restrictions')

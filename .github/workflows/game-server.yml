@@ -1,0 +1,67 @@
+name: Game server
+
+# Survival game server (apps/game-server): room tests + a short bot load test on every change,
+# then a Railway deploy from main. Only runs when the server or the shared rules change, so
+# unrelated pushes don't spend Railway build minutes.
+on:
+  push:
+    branches: [main]
+    paths:
+      - apps/game-server/**
+      - packages/shared/**
+      - pnpm-lock.yaml
+      - .github/workflows/game-server.yml
+  pull_request:
+    paths:
+      - apps/game-server/**
+      - packages/shared/**
+  workflow_dispatch:
+
+concurrency:
+  group: game-server-${{ github.ref }}
+  cancel-in-progress: false # never cancel a deploy half-way
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Room tests + bot load test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @baha/game-server typecheck
+      - run: pnpm --filter @baha/game-server test
+      - name: Bot load test (20 rooms × 5 bots, 20 s; p99 tick < 10 ms)
+        run: pnpm --filter @baha/game-server loadtest 20 20
+
+  deploy:
+    name: Deploy to Railway
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: railway up (project token, builds apps/game-server/Dockerfile)
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          if [ -z "$RAILWAY_TOKEN" ]; then echo "::notice::RAILWAY_TOKEN not set — skipping deploy"; exit 0; fi
+          npx -y @railway/cli@latest up --ci \
+            -s "${{ vars.RAILWAY_SERVICE_ID }}" -e "${{ vars.RAILWAY_ENVIRONMENT_ID }}"
+      - name: Health check
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf "${{ vars.GAME_SERVER_HEALTH_URL }}"; then echo; exit 0; fi
+            sleep 10
+          done
+          echo "::error::game server did not become healthy"; exit 1

@@ -69,7 +69,7 @@ function Timer() {
       <p className="text-[11px] font-bold opacity-80">
         {phase === 'prep' ? t('phasePrep') : t('phaseEvac')}
       </p>
-      <p className="font-display text-3xl leading-none font-bold tabular-nums">
+      <p className="font-display text-3xl leading-none font-bold tabular-nums [@media(max-height:500px)]:text-2xl">
         {left === null ? '∞' : fmt(left)}
       </p>
       <span className="sr-only" aria-live="assertive">
@@ -405,7 +405,7 @@ function HintToast() {
   };
   return (
     <div
-      className="pointer-events-none absolute inset-x-0 top-20 flex justify-center px-4"
+      className="pointer-events-none absolute inset-x-0 top-20 flex justify-center px-4 [@media(max-height:500px)]:inset-x-[9.5rem] [@media(max-height:500px)]:top-[calc(env(safe-area-inset-top)+0.75rem)] [@media(max-height:500px)]:px-0"
       aria-live="polite"
     >
       <AnimatePresence>
@@ -417,7 +417,7 @@ function HintToast() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className={cn(
-              'max-w-lg rounded-lg px-4 py-2.5 text-center text-sm font-bold shadow-xl',
+              'max-w-lg rounded-lg px-4 py-2.5 text-center text-sm font-bold shadow-xl [@media(max-height:500px)]:max-w-sm [@media(max-height:500px)]:px-3 [@media(max-height:500px)]:py-1.5 [@media(max-height:500px)]:text-xs',
               colors[hint.kind],
             )}
           >
@@ -434,8 +434,11 @@ function Announcement() {
   const time = useGame((s) => s.timeUi);
   if (!a || time - a.at > 7) return null;
   return (
-    <div className="absolute inset-x-0 top-3 flex justify-center px-20" role="status">
-      <p className="bg-signal-red flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold text-white shadow-xl">
+    <div
+      className="absolute inset-x-0 top-3 flex justify-center px-20 [@media(max-height:500px)]:px-[9.5rem]"
+      role="status"
+    >
+      <p className="bg-signal-red flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold text-white shadow-xl [@media(max-height:500px)]:px-3 [@media(max-height:500px)]:py-1.5 [@media(max-height:500px)]:text-xs">
         <Radio className="size-4 shrink-0 animate-pulse" aria-hidden /> {a.text}
       </p>
     </div>

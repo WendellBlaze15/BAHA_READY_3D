@@ -71,77 +71,91 @@ export function Briefing({
     ...(config.requiredItems.includes('flashlight') ? [t('objectiveFlashlight')] : []),
   ];
   return (
-    <div className="bg-storm-slate/80 absolute inset-0 z-30 flex items-center justify-center overflow-y-auto p-4 backdrop-blur-sm">
-      <div className="bg-card text-card-foreground my-auto w-full max-w-lg space-y-5 rounded-2xl p-6 text-center shadow-2xl sm:p-8">
-        <p className="text-primary font-display font-semibold">{t('briefingEyebrow')}</p>
-        <h1 className="text-4xl font-bold">{levelName}</h1>
-        <StormSignalMeter
-          value={Math.max(0.2, signal)}
-          label={levelName}
-          className="mx-auto max-w-xs"
-        />
-        <dl className="grid grid-cols-3 gap-2 text-sm">
-          <div className="bg-muted rounded-lg p-2">
-            <dt className="text-muted-foreground flex items-center justify-center gap-1 text-xs">
-              <Clock className="size-3" aria-hidden /> {t('prepTime')}
-            </dt>
-            <dd className="font-display text-xl font-bold">
-              {config.prepTimeSec ? `${config.prepTimeSec}s` : t('untimed')}
-            </dd>
-          </div>
-          <div className="bg-muted rounded-lg p-2">
-            <dt className="text-muted-foreground flex items-center justify-center gap-1 text-xs">
-              <Clock className="size-3" aria-hidden /> {t('evacTime')}
-            </dt>
-            <dd className="font-display text-xl font-bold">{config.evacTimeSec}s</dd>
-          </div>
-          <div className="bg-muted rounded-lg p-2">
-            <dt className="text-muted-foreground flex items-center justify-center gap-1 text-xs">
-              <Scale className="size-3" aria-hidden /> {t('weightLimit')}
-            </dt>
-            <dd className="font-display text-xl font-bold">{config.weightLimitKg} kg</dd>
-          </div>
-        </dl>
-        <div className="text-left">
-          <h2 className="mb-2 flex items-center gap-2 text-lg font-bold">
-            <Target className="size-4" aria-hidden /> {t('objectivesTitle')}
-          </h2>
-          <ul className="space-y-1.5 text-sm">
-            {objectives.map((o) => (
-              <li key={o} className="flex gap-2">
-                <span className="bg-signal-amber mt-1.5 size-2 shrink-0 rounded-full" aria-hidden />{' '}
-                {o}
-              </li>
-            ))}
-          </ul>
+    <div className="bg-storm-slate/80 short:p-2 absolute inset-0 z-30 flex items-center justify-center overflow-y-auto p-4 backdrop-blur-sm">
+      {/* Phones in landscape: two columns so Start is visible without scrolling. */}
+      <div className="bg-card text-card-foreground short:grid short:max-w-3xl short:grid-cols-2 short:items-center short:gap-x-5 short:space-y-0 short:p-4 my-auto w-full max-w-lg space-y-5 rounded-2xl p-6 text-center shadow-2xl sm:p-8">
+        <div className="short:space-y-3 space-y-5">
+          <p className="text-primary font-display short:text-sm font-semibold">
+            {t('briefingEyebrow')}
+          </p>
+          <h1 className="short:text-2xl text-4xl font-bold">{levelName}</h1>
+          <StormSignalMeter
+            value={Math.max(0.2, signal)}
+            label={levelName}
+            className="mx-auto max-w-xs"
+          />
+          <dl className="grid grid-cols-3 gap-2 text-sm">
+            <div className="bg-muted rounded-lg p-2">
+              <dt className="text-muted-foreground flex items-center justify-center gap-1 text-xs">
+                <Clock className="size-3" aria-hidden /> {t('prepTime')}
+              </dt>
+              <dd className="font-display short:text-base text-xl font-bold">
+                {config.prepTimeSec ? `${config.prepTimeSec}s` : t('untimed')}
+              </dd>
+            </div>
+            <div className="bg-muted rounded-lg p-2">
+              <dt className="text-muted-foreground flex items-center justify-center gap-1 text-xs">
+                <Clock className="size-3" aria-hidden /> {t('evacTime')}
+              </dt>
+              <dd className="font-display short:text-base text-xl font-bold">
+                {config.evacTimeSec}s
+              </dd>
+            </div>
+            <div className="bg-muted rounded-lg p-2">
+              <dt className="text-muted-foreground flex items-center justify-center gap-1 text-xs">
+                <Scale className="size-3" aria-hidden /> {t('weightLimit')}
+              </dt>
+              <dd className="font-display short:text-base text-xl font-bold">
+                {config.weightLimitKg} kg
+              </dd>
+            </div>
+          </dl>
         </div>
-        {bestScore !== null && (
-          <p className="text-muted-foreground text-sm">{t('bestScore', { score: bestScore })}</p>
-        )}
-        {guest && (
-          <p className="bg-muted flex items-start gap-2 rounded-lg p-3 text-left text-xs">
-            <Info className="mt-0.5 size-4 shrink-0" aria-hidden /> {t('guestNotice')}
+        <div className="short:space-y-2.5 space-y-5">
+          <div className="text-left">
+            <h2 className="short:mb-1 short:text-base mb-2 flex items-center gap-2 text-lg font-bold">
+              <Target className="size-4" aria-hidden /> {t('objectivesTitle')}
+            </h2>
+            <ul className="short:space-y-1 short:text-xs space-y-1.5 text-sm">
+              {objectives.map((o) => (
+                <li key={o} className="flex gap-2">
+                  <span
+                    className="bg-signal-amber mt-1.5 size-2 shrink-0 rounded-full"
+                    aria-hidden
+                  />{' '}
+                  {o}
+                </li>
+              ))}
+            </ul>
+          </div>
+          {bestScore !== null && (
+            <p className="text-muted-foreground text-sm">{t('bestScore', { score: bestScore })}</p>
+          )}
+          {guest && (
+            <p className="bg-muted flex items-start gap-2 rounded-lg p-3 text-left text-xs">
+              <Info className="mt-0.5 size-4 shrink-0" aria-hidden /> {t('guestNotice')}
+            </p>
+          )}
+          {error && (
+            <p role="alert" className="text-destructive text-sm">
+              {error}
+            </p>
+          )}
+          <Button
+            size="lg"
+            onClick={onStart}
+            disabled={busy}
+            className="bg-signal-amber text-storm-slate hover:bg-signal-amber/90 short:min-h-11 short:text-base min-h-14 w-full text-lg font-bold"
+          >
+            <Play className="fill-current" aria-hidden /> {t('start')}
+          </Button>
+          <p className="text-muted-foreground hidden text-xs [@media(pointer:fine)]:block">
+            {t('controlsDesktop')}
           </p>
-        )}
-        {error && (
-          <p role="alert" className="text-destructive text-sm">
-            {error}
+          <p className="text-muted-foreground text-xs [@media(pointer:fine)]:hidden">
+            {t('controlsMobile')}
           </p>
-        )}
-        <Button
-          size="lg"
-          onClick={onStart}
-          disabled={busy}
-          className="bg-signal-amber text-storm-slate hover:bg-signal-amber/90 min-h-14 w-full text-lg font-bold"
-        >
-          <Play className="fill-current" aria-hidden /> {t('start')}
-        </Button>
-        <p className="text-muted-foreground hidden text-xs [@media(pointer:fine)]:block">
-          {t('controlsDesktop')}
-        </p>
-        <p className="text-muted-foreground text-xs [@media(pointer:fine)]:hidden">
-          {t('controlsMobile')}
-        </p>
+        </div>
       </div>
     </div>
   );
@@ -165,7 +179,7 @@ export function Countdown({ onDone }: { onDone: () => void }) {
     >
       <span
         key={n}
-        className="font-display text-signal-amber animate-in zoom-in-50 fade-in text-[160px] leading-none font-bold drop-shadow-2xl"
+        className="font-display text-signal-amber animate-in zoom-in-50 fade-in short:text-[88px] text-[120px] leading-none font-bold drop-shadow-2xl sm:text-[160px]"
       >
         {n || ''}
       </span>

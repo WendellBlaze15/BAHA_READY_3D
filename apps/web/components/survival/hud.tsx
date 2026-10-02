@@ -54,11 +54,14 @@ function Bar({
   return (
     <div className="flex items-center gap-1.5" title={label}>
       <Icon
-        className={cn('size-4 shrink-0', value <= low && 'animate-pulse text-red-400')}
+        className={cn(
+          'short:size-3.5 size-4 shrink-0',
+          value <= low && 'animate-pulse text-red-400',
+        )}
         aria-hidden
       />
       <div
-        className="h-2.5 w-16 overflow-hidden rounded-full bg-black/40 sm:w-24"
+        className="short:h-2 short:w-20 h-2.5 w-16 overflow-hidden rounded-full bg-black/40 sm:w-24"
         role="meter"
         aria-label={label}
         aria-valuemin={0}
@@ -173,7 +176,7 @@ export function SurvivalHud() {
       style={{ height: '100dvh' }}
     >
       {/* Top-left: day, time, weather, boat */}
-      <div className="pointer-events-auto absolute top-[max(0.5rem,env(safe-area-inset-top))] left-[max(0.5rem,env(safe-area-inset-left))] space-y-1 rounded-lg bg-black/45 p-2 text-sm backdrop-blur-sm">
+      <div className="short:space-y-0.5 short:p-1.5 short:text-xs pointer-events-auto absolute top-[max(0.5rem,env(safe-area-inset-top))] left-[max(0.5rem,env(safe-area-inset-left))] space-y-1 rounded-lg bg-black/45 p-2 text-sm backdrop-blur-sm">
         <p className="flex items-center gap-1.5 font-semibold">
           {night ? <Moon className="size-4" aria-hidden /> : <Sun className="size-4" aria-hidden />}
           {t('hud.time', { day: v.day, time: fmtTime(v.minute) })}
@@ -188,7 +191,7 @@ export function SurvivalHud() {
         </p>
         <button
           type="button"
-          className="flex w-full items-center gap-1.5 text-left"
+          className="flex min-h-6 w-full items-center gap-1.5 text-left"
           onClick={() => useSession.getState().set({ panel: 'boat' })}
           aria-label={t('boat.title')}
         >
@@ -215,7 +218,7 @@ export function SurvivalHud() {
       </div>
 
       {/* Top-right: menu (chat button is rendered by ChatPanel) */}
-      <div className="pointer-events-auto absolute top-[max(0.5rem,env(safe-area-inset-top))] right-[max(5.5rem,calc(env(safe-area-inset-right)+5rem))] flex gap-2 sm:right-40">
+      <div className="pointer-events-auto absolute top-[max(0.5rem,env(safe-area-inset-top))] right-[calc(max(0.5rem,env(safe-area-inset-right))+3rem)] flex gap-2">
         <Button
           size="icon-lg"
           variant="secondary"
@@ -228,7 +231,7 @@ export function SurvivalHud() {
 
       {/* Toasts */}
       <div
-        className="absolute top-20 left-1/2 w-[min(92vw,30rem)] -translate-x-1/2 space-y-1.5"
+        className="absolute top-[max(0.5rem,env(safe-area-inset-top))] left-1/2 flex w-max max-w-[min(46vw,26rem)] -translate-x-1/2 flex-col items-center gap-1 max-sm:portrait:top-24 max-sm:portrait:max-w-[90vw]"
         aria-live="polite"
       >
         {toasts.map((x) => {
@@ -238,7 +241,7 @@ export function SurvivalHud() {
             <p
               key={x.id}
               className={cn(
-                'rounded-lg px-3 py-2 text-center text-sm font-medium shadow-lg backdrop-blur-sm',
+                'short:text-xs rounded-full px-3 py-1 text-center text-xs leading-snug font-medium shadow-md backdrop-blur-sm sm:text-sm',
                 x.tone === 'danger'
                   ? 'bg-red-700/90'
                   : x.tone === 'warn'
@@ -329,7 +332,7 @@ export function SurvivalHud() {
       {/* Hold progress */}
       {channelLeft !== null && channelLeft >= 0 && me.channelEndsAt !== -1 && (
         <p
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 translate-y-10 rounded-full bg-black/60 px-4 py-1 text-sm"
+          className="short:text-xs absolute top-1/2 left-1/2 -translate-x-1/2 translate-y-10 rounded-full bg-black/60 px-3 py-0.5 text-xs sm:text-sm"
           role="status"
         >
           {t(`hud.channel.${me.channel}` as 'hud.channel.loot')} {channelLeft.toFixed(1)}s
@@ -337,7 +340,7 @@ export function SurvivalHud() {
       )}
       {me.channel === 'build' && me.channelEndsAt === -1 && (
         <p
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 translate-y-10 rounded-full bg-black/60 px-4 py-1 text-sm"
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 translate-y-10 rounded-full bg-black/60 px-3 py-0.5 text-xs sm:text-sm"
           role="status"
         >
           {t('hud.channel.build')}
@@ -347,10 +350,10 @@ export function SurvivalHud() {
       {/* Life-state overlays */}
       {me.life === 'downed' && (
         <div
-          className="absolute inset-x-0 top-1/3 mx-auto w-fit rounded-xl bg-red-900/85 p-4 text-center"
+          className="short:p-2.5 short:text-sm absolute inset-x-0 top-1/3 mx-auto w-fit rounded-xl bg-red-900/85 p-3 text-center text-sm sm:p-4 sm:text-base"
           role="alert"
         >
-          <p className="text-lg font-bold">{t('hud.downed')}</p>
+          <p className="short:text-base text-base font-bold sm:text-lg">{t('hud.downed')}</p>
           <p>{t('hud.bleedOut', { seconds: bleed })}</p>
           {v.mode === 'solo' && v.secondWinds > 0 && (
             <Button
@@ -364,7 +367,7 @@ export function SurvivalHud() {
       )}
       {me.life === 'dead' && (
         <p
-          className="absolute inset-x-0 top-1/3 mx-auto w-fit rounded-xl bg-slate-900/85 p-4 text-center text-lg"
+          className="short:p-2.5 short:text-sm absolute inset-x-0 top-1/3 mx-auto w-fit rounded-xl bg-slate-900/85 p-3 text-center text-base sm:p-4 sm:text-lg"
           role="status"
         >
           {me.spectator ? t('hud.spectating') : t('hud.dead')}
@@ -372,7 +375,7 @@ export function SurvivalHud() {
       )}
       {me.rescued && (
         <p
-          className="absolute inset-x-0 top-1/3 mx-auto w-fit rounded-xl bg-emerald-800/85 p-4 text-center text-lg"
+          className="short:p-2.5 short:text-sm absolute inset-x-0 top-1/3 mx-auto w-fit rounded-xl bg-emerald-800/85 p-3 text-center text-base sm:p-4 sm:text-lg"
           role="status"
         >
           {t('hud.rescued')}
@@ -391,7 +394,7 @@ export function SurvivalHud() {
       )}
 
       {/* Bottom-left: stats (+ joystick on touch) */}
-      <div className="absolute bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-[max(0.5rem,env(safe-area-inset-left))] space-y-1 rounded-lg bg-black/45 p-2 text-xs backdrop-blur-sm">
+      <div className="short:space-y-0.5 short:p-1.5 absolute bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-[max(0.5rem,env(safe-area-inset-left))] space-y-1 rounded-lg bg-black/45 p-2 text-xs backdrop-blur-sm">
         <Bar value={me.health} label={t('hud.stat.health')} icon={Heart} color="bg-red-500" />
         <Bar value={me.hunger} label={t('hud.stat.hunger')} icon={Utensils} color="bg-amber-500" />
         <Bar value={me.thirst} label={t('hud.stat.thirst')} icon={Droplet} color="bg-sky-400" />
@@ -403,9 +406,12 @@ export function SurvivalHud() {
         />
         <Bar value={me.energy} label={t('hud.stat.energy')} icon={Zap} color="bg-lime-400" />
         <div className="flex items-center gap-1.5" title={t('hud.stat.stamina')}>
-          <Wind className={cn('size-4', me.hingal && 'text-amber-300')} aria-hidden />
+          <Wind
+            className={cn('short:size-3.5 size-4', me.hingal && 'text-amber-300')}
+            aria-hidden
+          />
           <div
-            className="relative h-2.5 w-16 overflow-hidden rounded-full bg-black/40 sm:w-24"
+            className="short:h-2 short:w-20 relative h-2.5 w-16 overflow-hidden rounded-full bg-black/40 sm:w-24"
             role="meter"
             aria-label={t('hud.stat.stamina')}
             aria-valuenow={me.stamina}
@@ -444,7 +450,7 @@ export function SurvivalHud() {
         )}
       </div>
       {mobile && me.life !== 'dead' && (
-        <div className="pointer-events-auto absolute bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-[max(10.5rem,calc(env(safe-area-inset-left)+10rem))] sm:left-56">
+        <div className="pointer-events-auto absolute bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-[max(10.5rem,calc(env(safe-area-inset-left)+10rem))] sm:left-56 max-sm:portrait:bottom-44 max-sm:portrait:left-[max(0.5rem,env(safe-area-inset-left))]">
           <Joystick />
         </div>
       )}
@@ -454,7 +460,7 @@ export function SurvivalHud() {
         {promptLabel && (
           <Button
             size="lg"
-            className="h-12 max-w-[60vw] truncate shadow-lg"
+            className="short:h-10 short:max-w-[40vw] h-12 max-w-[60vw] truncate shadow-lg"
             onClick={() => interactWith(target)}
           >
             {promptLabel}{' '}
@@ -494,7 +500,7 @@ export function SurvivalHud() {
                 type="button"
                 aria-label={t('hud.sprint')}
                 className={cn(
-                  'grid size-16 place-items-center rounded-full border-2 border-white/40 bg-black/40 text-xs font-bold',
+                  'short:size-14 grid size-16 place-items-center rounded-full border-2 border-white/40 bg-black/40 text-xs font-bold',
                   me.hingal && 'opacity-40',
                 )}
                 onPointerDown={() => inputActions.setSprint(true)}
@@ -507,7 +513,7 @@ export function SurvivalHud() {
               <button
                 type="button"
                 aria-label={t('hud.attack')}
-                className="grid size-16 place-items-center rounded-full border-2 border-white/40 bg-black/40"
+                className="short:size-14 grid size-16 place-items-center rounded-full border-2 border-white/40 bg-black/40"
                 onPointerDown={() => inputActions.attack()}
               >
                 <Axe aria-hidden />
@@ -516,7 +522,7 @@ export function SurvivalHud() {
                 type="button"
                 aria-label={t('hud.jump')}
                 className={cn(
-                  'col-span-2 grid h-16 place-items-center rounded-full border-2 border-white/40 bg-black/40',
+                  'short:h-12 col-span-2 grid h-16 place-items-center rounded-full border-2 border-white/40 bg-black/40',
                   me.hingal && 'opacity-40',
                 )}
                 onPointerDown={() => inputActions.jump()}

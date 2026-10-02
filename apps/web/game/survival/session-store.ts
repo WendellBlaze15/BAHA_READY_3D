@@ -94,9 +94,21 @@ export const useSession = create<SessionState>((set, get) => ({
   version: 0,
   set: (p) => set(p),
   toast: (t) => {
+    // The same message again (e.g. tapping a blocked action) refreshes it instead of stacking;
+    // at most 2 on screen so they never cover the middle of a phone screen.
+    const same = (x: Toast) =>
+      x.key === t.key && JSON.stringify(x.params) === JSON.stringify(t.params);
     const toast = { ...t, id: ++toastSeq, at: Date.now() };
-    set({ toasts: [...get().toasts.slice(-3), toast] });
-    setTimeout(() => set({ toasts: get().toasts.filter((x) => x.id !== toast.id) }), 4500);
+    set({
+      toasts: [
+        ...get()
+          .toasts.filter((x) => !same(x))
+          .slice(-1),
+        toast,
+      ],
+    });
+    const ms = t.tone === 'danger' ? 4500 : 3000;
+    setTimeout(() => set({ toasts: get().toasts.filter((x) => x.id !== toast.id) }), ms);
   },
   addChat: (l) =>
     set((s) => ({

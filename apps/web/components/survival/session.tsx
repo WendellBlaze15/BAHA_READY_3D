@@ -137,7 +137,11 @@ function attach(room: Room, myId: string) {
     s.toast({ tone: TONE[kind] ?? 'info', key, params });
     s.addChat({ id: `e${Date.now()}${kind}`, senderId: null, key, params, at: Date.now() });
   });
-  on('action:denied', (m) => s.toast({ tone: 'warn', key: `denied.${m.reason}` }));
+  on('action:denied', (m) => {
+    // Swinging/jumping again during the cooldown is normal play: a tiny buzz, no message.
+    if (m.reason === 'cooldown') return void buzz('light');
+    s.toast({ tone: 'warn', key: `denied.${m.reason}` });
+  });
   on('correction', (m) => {
     bus.correction = {
       x: m.x as number,

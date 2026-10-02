@@ -246,7 +246,7 @@ function RecentTips() {
         <h2 id="tips-title" className="flex items-center gap-2 text-xl font-bold">
           <BookOpen className="text-evac-green size-5" aria-hidden /> {t('tipsTitle')}
         </h2>
-        <Link href="/tips" className="text-link text-sm underline">
+        <Link href="/tips" className="text-link inline-flex min-h-6 items-center text-sm underline">
           {t('seeAll')}
         </Link>
       </div>

@@ -1,7 +1,9 @@
-// Survival Mode browser E2E (two real players, real Supabase, local or deployed game server).
-// Host creates a co-op game → guest joins via the invite link → roles/ready/start → story →
-// 3D game renders → host walks (server position changes) → team chat → screenshots (desktop +
-// phone landscape). Temporary @test.local users are deleted afterwards.
+// Survival Mode browser E2E (three real players, real Supabase, local or deployed game server).
+// Host creates a co-op game → guest joins via the invite link, a third player by typing the
+// code → roles/ready/start → story → 3D game renders for everyone → host walks (server
+// position changes) → team chat reaches both teammates → a player reloads mid-game and is back
+// in the same run → screenshots (desktop, phone landscape, tablet portrait).
+// Temporary @test.local users are deleted afterwards.
 // Usage: BASE=http://localhost:3000 node scripts/with-env.mjs tsx scripts/survival-e2e.ts
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -87,7 +89,7 @@ const myState = (page: Page) =>
 async function main() {
   // Bundled Chromium if installed, else the system Edge (Chromium) — same engine.
   const browser = await chromium.launch().catch(() => chromium.launch({ channel: 'msedge' }));
-  const [host, guest] = await Promise.all([mkPlayer('h'), mkPlayer('g')]);
+  const [host, guest, third] = await Promise.all([mkPlayer('h'), mkPlayer('g'), mkPlayer('t')]);
   const hctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   const gctx = await browser.newContext({
     viewport: { width: 740, height: 360 },
@@ -96,8 +98,14 @@ async function main() {
     userAgent:
       'Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Mobile Safari/537.36',
   });
+  const tctx = await browser.newContext({
+    viewport: { width: 768, height: 1024 },
+    isMobile: true,
+    hasTouch: true,
+  });
   const hp = await signIn(hctx, host);
   const gp = await signIn(gctx, guest);
+  const tp = await signIn(tctx, third);
 
   // Hub → new game (co-op, normal).
   await hp.goto(`${BASE}/en/survival`, { waitUntil: 'domcontentloaded' });
@@ -122,14 +130,32 @@ async function main() {
   check('guest joined through the invite link', true);
   await gp.screenshot({ path: `${OUT}/lobby-phone-landscape.png` });
 
+  // Third player types the code on the Join screen.
+  await tp.goto(`${BASE}/en/survival`, { waitUntil: 'domcontentloaded' });
+  await tp
+    .getByRole('link', { name: /join a team/i })
+    .first()
+    .click();
+  await tp.waitForURL(/\/survival\/join/, { timeout: 60_000 });
+  await tp.locator('main input').first().click();
+  await tp.keyboard.type(code); // the 6 boxes auto-advance and auto-join when full
+  await tp.waitForURL(/\/survival\/room\//, { timeout: 60_000 });
+  await hp
+    .getByText(/players 3\/5/i)
+    .first()
+    .waitFor({ timeout: 30_000 });
+  check('third player joined by typing the code', true);
+
   await hp.getByRole('button', { name: /^medic/i }).click();
   await gp.getByRole('button', { name: /^scout/i }).click();
+  await tp.getByRole('button', { name: /^builder/i }).click();
   await hp.getByRole('button', { name: /i'm ready/i }).click();
   await gp.getByRole('button', { name: /i'm ready/i }).click();
+  await tp.getByRole('button', { name: /i'm ready/i }).click();
   await hp.getByRole('button', { name: /start the game/i }).click({ timeout: 15_000 });
 
   // Story → skip for both.
-  for (const p of [hp, gp])
+  for (const p of [hp, gp, tp])
     await p.getByRole('button', { name: /^skip$/i }).click({ timeout: 30_000 });
   await hp.locator('canvas').first().waitFor({ timeout: 60_000 });
   await hp
@@ -140,6 +166,9 @@ async function main() {
   await hp.waitForTimeout(2000);
   await hp.screenshot({ path: `${OUT}/game-desktop.png` });
   await gp.screenshot({ path: `${OUT}/game-phone-landscape.png` });
+  await tp.locator('canvas').first().waitFor({ timeout: 60_000 });
+  await tp.screenshot({ path: `${OUT}/game-tablet-portrait.png` });
+  check('all three players are in the 3D world', (await myState(tp)).phase === 'playing');
 
   // Performance on a throttled "low-end phone" profile (4× CPU slowdown).
   const cdp = await gctx.newCDPSession(gp);
@@ -172,8 +201,32 @@ async function main() {
   await hp.getByRole('button', { name: /^send$/i }).click();
   await gp.getByRole('button', { name: /open chat/i }).click();
   await gp.getByText('tara sa palengke').first().waitFor({ timeout: 15_000 });
-  check('team chat delivered to the teammate', true);
+  await tp.getByRole('button', { name: /open chat/i }).click();
+  await tp.getByText('tara sa palengke').first().waitFor({ timeout: 15_000 });
+  check('team chat delivered to both teammates', true);
   await gp.screenshot({ path: `${OUT}/chat-phone-landscape.png` });
+
+  // Reconnect: the third player reloads mid-game and lands back in the same run.
+  const roomUrl = tp.url();
+  await tp.reload({ waitUntil: 'domcontentloaded' });
+  await tp.locator('canvas').first().waitFor({ timeout: 60_000 });
+  await tp.waitForFunction(
+    () => (window as any).__survival?.getState().room?.state?.phase === 'playing',
+    undefined,
+    { timeout: 30_000 },
+  );
+  const connected = await hp
+    .waitForFunction(
+      (id) =>
+        (window as any).__survival?.getState().room?.state?.players?.get(id)?.connected === true,
+      third.id,
+      { timeout: 30_000 },
+    )
+    .then(
+      () => true,
+      () => false,
+    );
+  check('reloaded player is back in the same run', tp.url() === roomUrl && connected);
 
   await browser.close();
 }

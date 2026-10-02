@@ -60,3 +60,28 @@ message ids + context; personal-info reports are high priority.
 
 Docker build from the repo root: `apps/game-server/Dockerfile` (`RAILWAY_DOCKERFILE_PATH`).
 Region Singapore, 1 replica, `/health` check, **sleeps when idle** to save credits.
+
+- `pnpm run setup railway` (from the repo root) creates or updates the project, service,
+  variables and domain. It is idempotent, never prints values, and reports the remaining
+  trial credits.
+- `pnpm run setup railway-deploy` builds and deploys the local checkout, then checks `/health`.
+- CI (`.github/workflows/game-server.yml`) runs the tests and a 20×5 bot load test. On `main` it
+  deploys with the project token in the `RAILWAY_TOKEN` secret.
+
+## Load test
+
+```bash
+pnpm --filter @baha/game-server loadtest 50 60   # rooms, seconds
+```
+
+The server runs in a child process with in-memory services and fake auth, so it touches no
+Supabase, Redis or Railway. Bots follow the terrain and walk, sprint, jump, swing and chat. The
+test reports per-room tick time (simulation and state sync), event-loop delay, CPU and memory,
+and passes when the p99 tick is under 10 ms.
+
+Last local result: 250 bots, p99 0.22 ms, max 5.4 ms, about 68 % of one core, 193 MB.
+
+Ticks average about 16 per second on Windows, against a target of 20. That is Windows timer
+granularity, not load: the same rate appears with 2 rooms.
+
+See also [docs/survival-mode.md](../../docs/survival-mode.md).
