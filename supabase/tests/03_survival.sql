@@ -101,9 +101,11 @@ select set_config('request.jwt.claims', pg_temp.claims('dddddddd-0000-0000-0000-
 set local role authenticated;
 select is((select count(*) from public.survival_runs), 0::bigint, 'admin without MFA (aal1) sees nothing');
 reset role;
+-- Total as the table owner (the live DB may hold real runs too).
+select set_config('t.all_runs', (select count(*) from public.survival_runs)::text, true);
 select set_config('request.jwt.claims', pg_temp.claims('dddddddd-0000-0000-0000-000000000004', 'aal2'), true);
 set local role authenticated;
-select is((select count(*) from public.survival_runs), 1::bigint, 'admin (aal2) monitors all runs');
+select is((select count(*) from public.survival_runs), current_setting('t.all_runs')::bigint, 'admin (aal2) monitors all runs');
 select is((select count(*) from public.survival_reports where priority = 'high'), 1::bigint, 'admin sees the high-priority report queue');
 select is((select count(*) from public.get_report_chat_evidence('53535353-0000-0000-0000-000000000003')), 1::bigint, 'admin reads chat evidence through the report');
 select throws_ok($$select * from public.survival_chat_messages$$, '42501', null, 'admin cannot browse all chats directly');
