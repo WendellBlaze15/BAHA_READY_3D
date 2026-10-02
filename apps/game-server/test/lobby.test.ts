@@ -177,8 +177,10 @@ describe('lobby flow', () => {
     expect(room.state.players.get(U.host)!.role).toBe('solo');
     expect(await errCode(sdkFor(U.p2).joinById(room.roomId, joinOpts))).toBeDefined();
     host.send('lobby:ready', { ready: true });
+    // Skipping while the run is still being set up must not be lost (no 60 s wait).
     host.send('lobby:start', {});
-    await until(() => room.state.phase === 'cutscene');
+    host.send('cutscene:done', {});
+    await until(() => room.state.phase === 'playing');
   });
 
   it('only the host changes difficulty, which resets ready', async () => {

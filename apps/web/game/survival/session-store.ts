@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { create } from 'zustand';
 import type { Room } from '@colyseus/sdk';
 
@@ -59,6 +59,8 @@ interface SessionState {
   pings: Ping[];
   panel: Panel;
   results: Record<string, unknown> | null;
+  /** Round-trip latency (ms) from the last ping; null until measured. */
+  latency: number | null;
   rewards: { rewards: string[]; achievements: string[] } | null;
   /** Bumped by the throttled state listener: UI selectors re-read room.state. */
   version: number;
@@ -88,6 +90,7 @@ export const useSession = create<SessionState>((set, get) => ({
   panel: null,
   results: null,
   rewards: null,
+  latency: null,
   version: 0,
   set: (p) => set(p),
   toast: (t) => {
@@ -128,37 +131,54 @@ export type SyncState = any;
  */
 export function useRoomState<T>(select: (s: SyncState) => T, hz = 6): T | undefined {
   const room = useSession((s) => s.room);
-  const [, force] = useState(0);
+  const selectRef = useRef(select);
+  selectRef.current = select;
+  const read = () => {
+    if (!room?.state) return undefined;
+    try {
+      return selectRef.current(room.state);
+    } catch {
+      return undefined;
+    }
+  };
+  const [value, setValue] = useState<T | undefined>(read);
+  const lastKey = useRef<string>('');
   useEffect(() => {
     if (!room) return;
     let last = 0;
     let timer: ReturnType<typeof setTimeout> | null = null;
+    // Re-render only when the SELECTED data changed (not on every 20 Hz patch).
+    const update = () => {
+      last = performance.now();
+      const next = read();
+      let key: string;
+      try {
+        key = JSON.stringify(next) ?? '';
+      } catch {
+        key = String(Math.random());
+      }
+      if (key === lastKey.current) return;
+      lastKey.current = key;
+      setValue(next);
+    };
     const bump = () => {
-      const now = performance.now();
-      const wait = 1000 / hz - (now - last);
-      if (wait <= 0) {
-        last = now;
-        force((v) => v + 1);
-      } else if (!timer)
+      const wait = 1000 / hz - (performance.now() - last);
+      if (wait <= 0) update();
+      else if (!timer)
         timer = setTimeout(() => {
           timer = null;
-          last = performance.now();
-          force((v) => v + 1);
+          update();
         }, wait);
     };
     room.onStateChange(bump);
-    bump();
+    update();
     return () => {
       if (timer) clearTimeout(timer);
       room.onStateChange.remove(bump);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room, hz]);
-  if (!room?.state) return undefined;
-  try {
-    return select(room.state);
-  } catch {
-    return undefined;
-  }
+  return value;
 }
 
 /** Helpers for MapSchema/ArraySchema on the client. */

@@ -559,8 +559,7 @@ export class SurvivalRoom extends Room<{
     on('cutscene:done', (c) => {
       if (this.state.phase !== 'cutscene') return;
       this.cutsceneDone.add(c.auth!.profile.userId);
-      const connected = [...this.state.players.values()].filter((p) => p.connected);
-      if (connected.every((p) => this.cutsceneDone.has(p.userId))) this.beginPlay();
+      this.maybeEndCutscene();
     });
 
     // ── Communication (lobby and in-run) ──
@@ -688,8 +687,15 @@ export class SurvivalRoom extends Room<{
       players: players.length,
       configId: this.configId,
     });
-    // Synced cutscene: everyone skips/finishes, or the timer moves the team on.
+    // Synced cutscene: everyone skips/finishes, or the timer moves the team on. Skips that
+    // arrived while the run was still being set up count now.
     this.clock.setTimeout(() => this.beginPlay(), this.config.session.cutsceneMaxWaitSec * 1000);
+    this.maybeEndCutscene();
+  }
+
+  private maybeEndCutscene() {
+    const connected = [...this.state.players.values()].filter((p) => p.connected);
+    if (connected.every((p) => this.cutsceneDone.has(p.userId))) this.beginPlay();
   }
 
   private beginPlay() {

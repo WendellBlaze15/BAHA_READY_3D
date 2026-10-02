@@ -1,8 +1,17 @@
 'use client';
 
-import { useMemo, useRef } from 'react';
+import { useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Color, type Group, type Mesh, type MeshStandardMaterial } from 'three';
+import {
+  Color,
+  Matrix4,
+  Quaternion,
+  Vector3,
+  type Group,
+  type InstancedMesh,
+  type Mesh,
+  type MeshStandardMaterial,
+} from 'three';
 import { BARANGAY_1, type SurvivalMap } from '@baha/shared/survival';
 import { Rain } from '@/game/world/Rain';
 import { Water } from '@/game/world/Water';
@@ -98,25 +107,7 @@ export function Barangay({ map = BARANGAY_1 }: { map?: SurvivalMap }) {
           <meshStandardMaterial color={z.key === 'lake_edge' ? '#2f3b2c' : '#5b4a36'} />
         </mesh>
       ))}
-      {map.platforms.map((p) => {
-        const base = map.zones.find((z) => z.key === p.zone)?.seabed ?? 0;
-        const h = p.top - base;
-        const bridge = p.id.includes('bridge');
-        return (
-          <group key={p.id}>
-            {!bridge && (
-              <mesh position={[p.x, base + h / 2 - 0.15, p.z]} castShadow receiveShadow>
-                <boxGeometry args={[p.w - 0.4, h - 0.3, p.d - 0.4]} />
-                <meshStandardMaterial color={ZONE_COLOR[p.zone] ?? '#aaa'} />
-              </mesh>
-            )}
-            <mesh position={[p.x, p.top - 0.15, p.z]} castShadow receiveShadow>
-              <boxGeometry args={[p.w, 0.3, p.d]} />
-              <meshStandardMaterial color={bridge ? '#8d6e63' : '#6d4c41'} />
-            </mesh>
-          </group>
-        );
-      })}
+      <Platforms map={map} />
       {/* Camp storage chest, campfire ring, dock planks, signal spot, rescue point flag */}
       <mesh position={[map.campStorage.x, 4.35, map.campStorage.z]} castShadow>
         <boxGeometry args={[1.4, 0.7, 0.9]} />
@@ -144,6 +135,71 @@ export function Barangay({ map = BARANGAY_1 }: { map?: SurvivalMap }) {
       </group>
       <HazardCues map={map} />
     </group>
+  );
+}
+
+/**
+ * All house walls and roofs as two instanced meshes (2 draw calls instead of ~60) — the
+ * biggest win on low-end phones.
+ */
+function Platforms({ map }: { map: SurvivalMap }) {
+  const walls = useRef<InstancedMesh>(null);
+  const roofs = useRef<InstancedMesh>(null);
+  const items = useMemo(
+    () =>
+      map.platforms.map((p) => {
+        const base = map.zones.find((z) => z.key === p.zone)?.seabed ?? 0;
+        return { p, base, h: p.top - base, bridge: p.id.includes('bridge') };
+      }),
+    [map],
+  );
+  const wallItems = items.filter((i) => !i.bridge);
+  useLayoutEffect(() => {
+    const m = new Matrix4();
+    const q = new Quaternion();
+    const c = new Color();
+    wallItems.forEach(({ p, base, h }, i) => {
+      m.compose(
+        new Vector3(p.x, base + h / 2 - 0.15, p.z),
+        q,
+        new Vector3(p.w - 0.4, h - 0.3, p.d - 0.4),
+      );
+      walls.current?.setMatrixAt(i, m);
+      walls.current?.setColorAt(i, c.set(ZONE_COLOR[p.zone] ?? '#aaaaaa'));
+    });
+    items.forEach(({ p, bridge }, i) => {
+      m.compose(new Vector3(p.x, p.top - 0.15, p.z), q, new Vector3(p.w, 0.3, p.d));
+      roofs.current?.setMatrixAt(i, m);
+      roofs.current?.setColorAt(i, c.set(bridge ? '#8d6e63' : '#6d4c41'));
+    });
+    for (const im of [walls.current, roofs.current]) {
+      if (!im) continue;
+      im.instanceMatrix.needsUpdate = true;
+      if (im.instanceColor) im.instanceColor.needsUpdate = true;
+      im.computeBoundingSphere();
+    }
+  }, [items, wallItems]);
+  return (
+    <>
+      <instancedMesh
+        ref={walls}
+        args={[undefined, undefined, wallItems.length]}
+        castShadow
+        receiveShadow
+      >
+        <boxGeometry />
+        <meshStandardMaterial />
+      </instancedMesh>
+      <instancedMesh
+        ref={roofs}
+        args={[undefined, undefined, items.length]}
+        castShadow
+        receiveShadow
+      >
+        <boxGeometry />
+        <meshStandardMaterial />
+      </instancedMesh>
+    </>
   );
 }
 

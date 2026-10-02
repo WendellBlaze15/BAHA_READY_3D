@@ -1,9 +1,17 @@
 'use client';
 
-import { useMemo, useRef } from 'react';
+import { memo, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
-import type { Group, Mesh, MeshStandardMaterial } from 'three';
+import {
+  Color,
+  Matrix4,
+  Quaternion,
+  Vector3,
+  type Group,
+  type InstancedMesh,
+  type Mesh,
+} from 'three';
 import { BARANGAY_1, groundAt } from '@baha/shared/survival';
 import type { AvatarConfig } from '@/lib/avatar/presets';
 import { BlockyCharacter, type CharacterAction } from '@/game/entities/BlockyCharacter';
@@ -22,43 +30,53 @@ function parseAvatar(json: string | undefined): Partial<AvatarConfig> | null {
   }
 }
 
-/** Map loot containers; opened ones turn dark (state.lootOpened). */
+/**
+ * Map loot containers as ONE instanced mesh (per-instance size + color); opened ones turn dark
+ * (state.lootOpened). Floating debris bobs with the water.
+ */
 export function LootMarkers() {
-  const mats = useRef<(MeshStandardMaterial | null)[]>([]);
+  const ref = useRef<InstancedMesh>(null);
+  const opened = useRef<string>('');
+  const pts = BARANGAY_1.lootPoints;
+  const m = useMemo(() => new Matrix4(), []);
+  const q = useMemo(() => new Quaternion(), []);
+  const c = useMemo(() => new Color(), []);
   useFrame(({ clock }) => {
-    const opened = st()?.lootOpened;
-    BARANGAY_1.lootPoints.forEach((l, i) => {
-      const m = mats.current[i];
-      if (!m) return;
-      const done = !!opened?.get?.(l.id);
-      m.emissiveIntensity = done ? 0 : 0.25 + Math.sin(clock.elapsedTime * 2 + i) * 0.15;
-      m.opacity = done ? 0.45 : 1;
+    const im = ref.current;
+    if (!im) return;
+    const lo = st()?.lootOpened;
+    const key = pts.map((l) => (lo?.get?.(l.id) ? '1' : '0')).join('');
+    const pulse = 0.85 + Math.sin(clock.elapsedTime * 2) * 0.15;
+    pts.forEach((l, i) => {
+      const tall = l.container === 'cabinet' || l.container === 'shelf' || l.container === 'drum';
+      const y =
+        l.container === 'floating'
+          ? live.waterY + Math.sin(clock.elapsedTime + i) * 0.05
+          : groundAt(BARANGAY_1, l.x, l.z);
+      m.compose(
+        new Vector3(l.x, y + (tall ? 0.6 : 0.3), l.z),
+        q,
+        new Vector3(0.8, tall ? 1.2 : 0.6, 0.6),
+      );
+      im.setMatrixAt(i, m);
+      const done = key[i] === '1';
+      c.set(containerColor(l.container));
+      if (done) c.multiplyScalar(0.35);
+      else c.multiplyScalar(pulse * 1.15);
+      im.setColorAt(i, c);
     });
+    im.instanceMatrix.needsUpdate = true;
+    if (im.instanceColor) im.instanceColor.needsUpdate = true;
+    if (opened.current !== key) {
+      opened.current = key;
+      im.computeBoundingSphere();
+    }
   });
   return (
-    <group>
-      {BARANGAY_1.lootPoints.map((l, i) => {
-        const y = l.container === 'floating' ? live.waterY : groundAt(BARANGAY_1, l.x, l.z);
-        const tall = l.container === 'cabinet' || l.container === 'shelf' || l.container === 'drum';
-        return (
-          <mesh key={l.id} position={[l.x, y + (tall ? 0.6 : 0.3), l.z]} castShadow>
-            {l.container === 'drum' ? (
-              <cylinderGeometry args={[0.35, 0.35, 1.2, 10]} />
-            ) : (
-              <boxGeometry args={[0.8, tall ? 1.2 : 0.6, 0.6]} />
-            )}
-            <meshStandardMaterial
-              ref={(m) => {
-                mats.current[i] = m;
-              }}
-              color={containerColor(l.container)}
-              emissive="#ffd54f"
-              transparent
-            />
-          </mesh>
-        );
-      })}
-    </group>
+    <instancedMesh ref={ref} args={[undefined, undefined, pts.length]} castShadow>
+      <boxGeometry />
+      <meshStandardMaterial />
+    </instancedMesh>
   );
 }
 
@@ -199,7 +217,7 @@ export function DynamicEntities() {
 
 const NPC_LOOK: Partial<AvatarConfig> = { shirt: '#90a4ae', pants: '#455a64', hair: '#3e2723' };
 
-function Survivor({ id }: { id: string }) {
+const Survivor = memo(function Survivor({ id }: { id: string }) {
   const g = useRef<Group>(null);
   const speed = useRef(0);
   const action = useRef<CharacterAction>({ airborne: false, sprinting: false, swing: 0 });
@@ -228,7 +246,7 @@ function Survivor({ id }: { id: string }) {
       </mesh>
     </group>
   );
-}
+});
 
 /** Teammates: interpolated (≈100 ms behind), name + chat bubble, life-state tinting. */
 export function RemotePlayers() {
@@ -249,7 +267,15 @@ export function RemotePlayers() {
   );
 }
 
-function Remote({ id, name, avatar }: { id: string; name: string; avatar: string }) {
+const Remote = memo(function Remote({
+  id,
+  name,
+  avatar,
+}: {
+  id: string;
+  name: string;
+  avatar: string;
+}) {
   const g = useRef<Group>(null);
   const speed = useRef(0);
   const action = useRef<CharacterAction>({ airborne: false, sprinting: false, swing: 0 });
@@ -304,4 +330,4 @@ function Remote({ id, name, avatar }: { id: string; name: string; avatar: string
       </Html>
     </group>
   );
-}
+});

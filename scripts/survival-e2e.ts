@@ -141,6 +141,17 @@ async function main() {
   await hp.screenshot({ path: `${OUT}/game-desktop.png` });
   await gp.screenshot({ path: `${OUT}/game-phone-landscape.png` });
 
+  // Performance on a throttled "low-end phone" profile (4× CPU slowdown).
+  const cdp = await gctx.newCDPSession(gp);
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+  await gp.waitForTimeout(4000);
+  const perf = (await gp.evaluate(
+    () => (window as unknown as { __survivalPerf?: unknown }).__survivalPerf,
+  )) as { fps: number; calls: number; triangles: number } | undefined;
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+  console.log(`  perf (phone, 4× CPU throttle): ${JSON.stringify(perf)}`);
+  check('draw calls stay low (< 160)', !!perf && perf.calls < 160, perf);
+
   // Walk forward 1.5 s; the authoritative (server) position must change, no correction.
   const before = await myState(hp);
   await hp

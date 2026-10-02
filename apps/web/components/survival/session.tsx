@@ -8,6 +8,7 @@ import { Link } from '@/i18n/navigation';
 import { getSupabaseBrowser } from '@/lib/supabase/client';
 import { closeKey, errorKey, joinRoom } from '@/lib/survival/client';
 import { bus } from '@/game/survival/bus';
+import { buzz } from '@/game/survival/native';
 import { useRoomState, useSession, type Ping } from '@/game/survival/session-store';
 import { LoadingAnnouncement, SkeletonCard } from '@/components/skeletons';
 import { Button } from '@/components/ui/button';
@@ -127,6 +128,11 @@ function attach(room: Room, myId: string) {
     if (m.by) params.by = nameOf(m.by);
     if (m.structure) params.structure = String(m.structure);
     if (kind === 'radio') params.tip = Number(m.tip);
+    if (
+      (kind === 'downed' || kind === 'lifted' || kind === 'boat_stage') &&
+      (m.userId === myId || kind === 'boat_stage')
+    )
+      void buzz(kind === 'boat_stage' ? 'light' : 'heavy');
     if (kind === 'sleeping' || kind.startsWith('phase_day') || kind === 'phase_dawn') return;
     s.toast({ tone: TONE[kind] ?? 'info', key, params });
     s.addChat({ id: `e${Date.now()}${kind}`, senderId: null, key, params, at: Date.now() });
@@ -172,7 +178,7 @@ function attach(room: Room, myId: string) {
   on('channel:cancelled', () => {});
   on('crafted', () => {});
   on('hit', () => {});
-  on('hurt', () => {});
+  on('hurt', () => void buzz('light'));
   on('swing', (m) => bus.swings.set(m.userId as string, performance.now()));
   on('emote', (m) =>
     bus.emotes.set(m.userId as string, { id: m.id as string, at: performance.now() }),

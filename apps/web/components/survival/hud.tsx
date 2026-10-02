@@ -19,6 +19,7 @@ import {
   Sun,
   Thermometer,
   Utensils,
+  Wifi,
   Wind,
   Zap,
 } from 'lucide-react';
@@ -81,6 +82,7 @@ export function SurvivalHud() {
   const offers = useSession((s) => s.offers);
   const room = useSession((s) => s.room);
   const target = useTarget((s) => s.target);
+  const latency = useSession((s) => s.latency);
   const v = useRoomState((s) => {
     const me = myId ? s.players?.get?.(myId) : undefined;
     return {
@@ -201,6 +203,11 @@ export function SurvivalHud() {
             />
           </span>
         </button>
+        {latency !== null && latency > 300 && (
+          <p className="flex items-center gap-1 text-xs font-semibold text-amber-300" role="status">
+            <Wifi className="size-3.5" aria-hidden /> {t('hud.network')} · {latency} ms
+          </p>
+        )}
         <p className="flex items-center gap-1.5 text-xs opacity-90">
           {t('hud.camp', { level: v.campLevel ?? 1 })}
           {v.fireLit && <Flame className="size-3.5 text-orange-400" aria-label={t('hud.fire')} />}

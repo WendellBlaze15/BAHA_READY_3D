@@ -1,19 +1,20 @@
 'use client';
 
 import { Suspense, useEffect, useMemo, useRef } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { useTranslations } from 'next-intl';
 import type { AvatarConfig } from '@/lib/avatar/presets';
 import { useProfile, useSettings } from '@/lib/data/me';
 import { useSurvivalConfig } from '@/lib/data/survival';
 import { attachKeyboard, inputActions } from '@/game/systems/input';
-import { detectQuality, isMobileDevice } from '@/game/systems/quality';
+import { detectQuality } from '@/game/systems/quality';
 import { readCamPrefs } from '@/game/systems/camera';
 import { SurvivalHud } from '@/components/survival/hud';
 import { SurvivalPanels } from '@/components/survival/panels';
 import { ResultsView, type ResultsData } from '@/components/survival/results';
 import { ChopTargets, DynamicEntities, LootMarkers, RemotePlayers } from './Entities';
 import { LocalPlayer } from './LocalPlayer';
+import { enterGameMode } from './native';
 import { useRoomState, useSession } from './session-store';
 import { Barangay, Sky, Weather } from './World';
 
@@ -39,11 +40,22 @@ export function SurvivalGame() {
   const drag = useRef<{ id: number; x: number; y: number } | null>(null);
 
   useEffect(() => attachKeyboard(), []);
-  // Landscape on phones (Capacitor locks it; browsers get a gentle prompt in the HUD).
+  // Landscape + screen awake while playing; backgrounding the app counts as a disconnect.
   useEffect(() => {
-    const o = screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> };
-    if (isMobileDevice()) o.lock?.('landscape').catch(() => {});
-    return () => o.unlock?.();
+    let undo: (() => void) | null = null;
+    let cancelled = false;
+    void enterGameMode().then((u) => (cancelled ? u() : (undo = u)));
+    return () => {
+      cancelled = true;
+      undo?.();
+    };
+  }, []);
+  // Connection quality for the HUD badge.
+  useEffect(() => {
+    const id = setInterval(() => {
+      useSession.getState().room?.ping((ms) => useSession.getState().set({ latency: ms }));
+    }, 5000);
+    return () => clearInterval(id);
   }, []);
 
   return (
@@ -80,6 +92,7 @@ export function SurvivalGame() {
           <DynamicEntities />
           <RemotePlayers />
           <LocalPlayer config={config} avatar={avatar} prefs={prefs} />
+          <PerfProbe />
         </Suspense>
       </Canvas>
       <SurvivalHud />
@@ -99,4 +112,26 @@ export function SurvivalGame() {
       )}
     </div>
   );
+}
+
+/** E2E-only performance probe: FPS and draw calls (window.__survivalPerf). */
+function PerfProbe() {
+  const acc = useRef({ frames: 0, since: 0 });
+  useFrame(({ gl, clock }) => {
+    const w = window as unknown as { __BAHA_E2E__?: boolean; __survivalPerf?: unknown };
+    if (!w.__BAHA_E2E__) return;
+    const a = acc.current;
+    a.frames++;
+    const now = clock.elapsedTime;
+    if (now - a.since >= 1) {
+      w.__survivalPerf = {
+        fps: Math.round(a.frames / (now - a.since)),
+        calls: gl.info.render.calls,
+        triangles: gl.info.render.triangles,
+      };
+      a.frames = 0;
+      a.since = now;
+    }
+  });
+  return null;
 }
