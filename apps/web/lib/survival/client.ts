@@ -28,6 +28,8 @@ const CODE_KEYS: Record<number, string> = {
   4111: 'rested',
   4112: 'left_run',
   4113: 'not_member',
+  4114: 'survival_disabled',
+  4115: 'blocked',
   4199: 'server_restarting',
 };
 
@@ -42,7 +44,7 @@ export function errorKey(e: unknown): string {
 
 /** Codes that end the session for good (no auto-reconnect UI). */
 export const FINAL_CLOSE_CODES = new Set([
-  4101, 4102, 4103, 4104, 4106, 4109, 4110, 4111, 4112, 4113,
+  4101, 4102, 4103, 4104, 4106, 4109, 4110, 4111, 4112, 4113, 4114, 4115,
 ]);
 export const closeKey = (code: number) => CODE_KEYS[code] ?? null;
 

@@ -1,6 +1,7 @@
 import {
   QUICK_CHAT,
   filterChatMessage,
+  toFilWords,
   type ClientMessage,
   type SurvivalConfig,
 } from '@baha/shared/survival';
@@ -79,7 +80,12 @@ export class ChatHandler {
 
     const runId = this.host.runId();
     if (!runId) return reject('try_again');
-    const f = filterChatMessage(m.text, { maxLength: this.cfg.maxLength });
+    const lists = await s.db.chatWordlist();
+    const f = filterChatMessage(m.text, {
+      maxLength: this.cfg.maxLength,
+      extraWords: lists.words.length ? toFilWords(lists.words) : undefined,
+      blockedPhrases: lists.blockedPhrases,
+    });
     let id: number;
     try {
       id = await s.db.insertChat({
@@ -130,6 +136,18 @@ export class ChatHandler {
     } catch (e) {
       log.warn('auto-mute failed', errInfo(e));
     }
+  }
+
+  /** Admin hid a message (moderation): drop it from history and from every screen. */
+  hide(messageId: number) {
+    const i = this.guard.history.findIndex((l) => l.id === messageId);
+    if (i >= 0) this.guard.history.splice(i, 1);
+    for (const r of this.host.members()) r.send('chat:hidden', { id: messageId });
+  }
+
+  /** Blocks between a joining player and anyone present (either direction). */
+  blockedWith(userId: string, others: string[]) {
+    return others.some((o) => this.blocks.has(key(userId, o)) || this.blocks.has(key(o, userId)));
   }
 
   /** Quick chat is always allowed (it can't carry unsafe content), except chat mode "off". */

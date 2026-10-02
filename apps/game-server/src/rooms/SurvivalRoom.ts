@@ -39,6 +39,8 @@ const PING_TTL_MS = 10_000;
 const VOTE_SEC = 30;
 /** runId → roomId key lifetime (refreshed by housekeeping every 30 s). */
 const RUN_KEY_TTL_SEC = 120;
+/** Kill switch: running sessions get this long to wrap up, then save and close. */
+const SHUTDOWN_WARNING_MS = 5 * 60_000;
 
 const createOptions = z.object({
   protocol: z.number().int(),
@@ -57,6 +59,9 @@ type SurvivalClient = Client<{ auth: AuthData }>;
 
 export interface RoomMeta {
   code: string;
+  runId: string | null;
+  day: number;
+  flags: string[];
   mode: 'solo' | 'coop';
   difficulty: string;
   phase: string;
@@ -116,6 +121,8 @@ export class SurvivalRoom extends Room<{
   private resumed = false;
   private restAtDawn = false;
   private saving: Promise<boolean> | null = null;
+  private shutdownTimer: { clear(): void } | null = null;
+  private roleNoticeSent = new Set<string>();
 
   /** Runs at matchmaking time, BEFORE a room is created or a seat is reserved. */
   static async onAuth(token: string, options: unknown, context: AuthContext): Promise<AuthData> {
@@ -296,6 +303,10 @@ export class SurvivalRoom extends Room<{
       throw new ServerError(RoomCode.ALREADY_STARTED, 'already_started');
     if (this.state.players.has(userId))
       throw new ServerError(RoomCode.DUPLICATE_SESSION, 'duplicate_session');
+    // Section 17.5: blocked players are never placed together.
+    await this.chat.loadRelations([userId, ...this.state.players.keys()]);
+    if (this.chat.blockedWith(userId, [...this.state.players.keys()]))
+      throw new ServerError(RoomCode.BLOCKED, 'blocked');
 
     const p = new PlayerState();
     p.userId = userId;
@@ -407,6 +418,40 @@ export class SurvivalRoom extends Room<{
     if (this.sim?.flags.size)
       log.warn('run flags', { roomId: this.roomId, runId: this.runId, flags: [...this.sim.flags] });
     log.info('room disposed', { roomId: this.roomId });
+  }
+
+  /** Moderation: an admin hid a chat message (called via remoteRoomCall). */
+  hideChat(messageId: number) {
+    this.chat.hide(messageId);
+    return { ok: true };
+  }
+
+  /** Kill switch (Section 2.3): lobbies close now; runs get a 5-minute warning, then save + close. */
+  private async checkKillSwitch() {
+    let on = true;
+    try {
+      on = await services().db.survivalEnabled();
+    } catch {
+      return;
+    }
+    if (on) {
+      if (this.shutdownTimer) {
+        this.shutdownTimer.clear();
+        this.shutdownTimer = null;
+        this.broadcast('event', { kind: 'shutdown_cancelled' });
+      }
+      return;
+    }
+    if (this.state.phase === 'lobby' || this.state.phase === 'cutscene') {
+      await this.disconnect(RoomCode.SURVIVAL_DISABLED);
+      return;
+    }
+    if (this.shutdownTimer || this.state.phase !== 'playing') return;
+    this.broadcast('event', { kind: 'shutdown_warning', minutes: SHUTDOWN_WARNING_MS / 60_000 });
+    this.shutdownTimer = this.clock.setTimeout(async () => {
+      await this.save('kill_switch');
+      await this.disconnect(RoomCode.SURVIVAL_DISABLED);
+    }, SHUTDOWN_WARNING_MS);
   }
 
   /** Graceful SIGTERM (deploys/restarts): save first, then close. Clients can resume. */
@@ -680,7 +725,10 @@ export class SurvivalRoom extends Room<{
       else this.clientOf(o.to)?.send(o.type, o.payload);
       if (o.type === 'event' && o.payload.kind === 'dawn') dawn = true;
     }
-    if (dawn && !sim.obj.result) void this.onDawn();
+    if (dawn && !sim.obj.result) {
+      void this.onDawn();
+      void this.syncMetadata();
+    }
     syncWorld(this.state, sim);
     if (sim.obj.result && this.state.phase === 'playing') void this.onRunEnded();
   }
@@ -861,6 +909,7 @@ export class SurvivalRoom extends Room<{
       await services()
         .liveRuns.set(this.runId, this.roomId, RUN_KEY_TTL_SEC)
         .catch(() => {});
+    await this.checkKillSwitch();
     if (this.state.phase !== 'lobby') return;
     const idleMs = this.config.session.lobbyIdleMin * 60_000;
     if (Date.now() - this.lastActivity > idleMs) {
@@ -884,8 +933,15 @@ export class SurvivalRoom extends Room<{
       if (!uid) continue;
       try {
         const el = await services().checkEligibility(uid);
-        if (!el.ok) c.leave(RoomCode.ELIGIBILITY_LOST);
-        else c.auth!.profile = el.profile;
+        if (el.ok) c.auth!.profile = el.profile;
+        else if (el.reason === 'role_changed') {
+          // Promoted mid-run: finish this session, but no new runs/joins afterwards.
+          if (!this.roleNoticeSent.has(uid)) {
+            this.roleNoticeSent.add(uid);
+            c.send('toast', { key: 'role_changed' });
+          }
+        } else if (el.reason !== 'survival_disabled') c.leave(RoomCode.ELIGIBILITY_LOST);
+        // survival_disabled is handled by checkKillSwitch (warning, save, close).
       } catch (e) {
         log.warn('eligibility recheck failed', { roomId: this.roomId, ...errInfo(e) });
       }
@@ -906,6 +962,9 @@ export class SurvivalRoom extends Room<{
     const host = this.state.players.get(this.state.hostId);
     await this.setMetadata({
       code: this.codeReleased ? '' : this.state.code,
+      runId: this.runId,
+      day: this.sim?.clock.day ?? 0,
+      flags: this.sim ? [...this.sim.flags] : [],
       mode: this.state.mode as 'solo' | 'coop',
       difficulty: this.state.difficulty,
       phase: this.state.phase,

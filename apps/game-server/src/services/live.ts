@@ -4,7 +4,7 @@ import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 import { gunzipSync, gzipSync, strFromU8, strToU8 } from 'fflate';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
-import { survivalConfigSchema } from '@baha/shared/survival';
+import { EMPTY_WORDLIST, chatWordlistSchema, survivalConfigSchema } from '@baha/shared/survival';
 import type { Env } from '../env.ts';
 import { errInfo, log } from '../log.ts';
 import { randomCode } from './codes.ts';
@@ -91,7 +91,7 @@ export function liveServices(env: Env): Services {
         supabase.rpc('can_play_survival', { uid: userId }),
         supabase
           .from('profiles')
-          .select('id, username, avatar_config')
+          .select('id, username, avatar_config, status')
           .eq('id', userId)
           .maybeSingle(),
         supabase.rpc('chat_restricted', { uid: userId }),
@@ -102,7 +102,12 @@ export function liveServices(env: Env): Services {
           .maybeSingle(),
       ]);
     if (error) throw new Error(`eligibility check failed: ${error.message}`);
-    if (can !== true || !profile) return { ok: false, reason: 'not_eligible' };
+    if (can !== true || !profile) {
+      // Promoted to facilitator/admin while playing: not "banned" — may finish this session.
+      const { data: staff } = await supabase.rpc('has_staff_role', { uid: userId });
+      const active = !!profile && (profile as { status?: string }).status !== 'suspended';
+      return { ok: false, reason: staff === true && active ? 'role_changed' : 'not_eligible' };
+    }
     return {
       ok: true,
       profile: {
@@ -134,6 +139,8 @@ export function liveServices(env: Env): Services {
     return value;
   }
 
+  let wordlistCache: { at: number; value: import('@baha/shared/survival').ChatWordlist } | null =
+    null;
   const configByIdCache = new Map<string, Awaited<ReturnType<Persistence['configById']>>>();
   const must = <T>(r: { data: T | null; error: { message: string } | null }, what: string): T => {
     if (r.error) throw new Error(`${what}: ${r.error.message}`);
@@ -312,6 +319,19 @@ export function liveServices(env: Env): Services {
         );
     },
     chatEnabled: () => settingOn('survival_chat_enabled'),
+    survivalEnabled: () => settingOn('survival_enabled'),
+    async chatWordlist() {
+      if (wordlistCache && Date.now() - wordlistCache.at < 60_000) return wordlistCache.value;
+      const { data } = await supabase
+        .from('system_settings')
+        .select('value')
+        .eq('key', 'survival_chat_wordlist')
+        .maybeSingle();
+      const parsed = chatWordlistSchema.safeParse(data?.value);
+      const value = parsed.success ? parsed.data : EMPTY_WORDLIST;
+      wordlistCache = { at: Date.now(), value };
+      return value;
+    },
 
     async loadRun(runId) {
       const { data } = await supabase

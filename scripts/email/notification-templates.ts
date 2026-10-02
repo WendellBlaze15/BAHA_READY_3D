@@ -309,6 +309,35 @@ const SPECS: Record<string, Spec> = {
         'The admin role was removed from your account. If you didn’t expect this, contact a super admin.',
     },
   },
+  survival_warning: {
+    subject: 'Paalala tungkol sa Survival Mode · A note about Survival Mode',
+    accent: brand.amber,
+    signal: 2,
+    fil: {
+      heading: 'Paalala mula sa admin',
+      intro: `Nakatanggap kami ng report tungkol sa isang laro mo sa Survival Mode. Tala ng admin: ${P('note')}. Tandaan: maging magalang at huwag magbahagi o humingi ng personal na impormasyon.`,
+      cta: 'Buksan ang Survival Mode',
+    },
+    en: {
+      heading: 'A note from an admin',
+      intro: `We received a report about one of your Survival Mode games. Admin note: ${P('note')}. Please be respectful and never share or ask for personal information.`,
+      cta: 'Open Survival Mode',
+    },
+  },
+  survival_restricted: {
+    subject: 'Pansamantalang limitasyon sa Survival Mode · Survival Mode restriction',
+    accent: brand.red,
+    signal: 3,
+    critical: true,
+    fil: {
+      heading: 'May pansamantalang limitasyon ang account mo',
+      intro: `Dahil sa isang report, pansamantalang naka-off ang ${P('scope')} mo sa Survival Mode hanggang ${P('until')}. Dahilan: ${P('reason')}. Kung walang petsa, permanente ito hanggang suriin muli.`,
+    },
+    en: {
+      heading: 'Your account has a temporary restriction',
+      intro: `Because of a report, your Survival Mode ${P('scope')} is paused until ${P('until')}. Reason: ${P('reason')}. If no date is shown, it stays until reviewed again.`,
+    },
+  },
   survival_run_expiring: {
     subject: 'Mag-e-expire ang inyong Survival run · Your Survival run is expiring',
     accent: brand.amber,
@@ -333,7 +362,11 @@ export function buildNotificationTemplates() {
     subject: s.subject,
     critical: !!s.critical,
     html: renderEmail({
-      preheader: s.fil.intro.slice(0, 90),
+      // Never cut a {{ variable }} in half (Brevo rejects unterminated tags).
+      preheader: s.fil.intro
+        .replace(/{{[^}]*}}/g, '…')
+        .slice(0, 90)
+        .replace(/{{[^}]*$/, ''),
       accent: s.accent,
       signal: s.signal,
       fil: {

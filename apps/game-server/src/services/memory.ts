@@ -118,6 +118,8 @@ export function memoryPersistence() {
     mutes: new Set<string>(),
     blocks: new Set<string>(),
     chatOn: true,
+    survivalOn: true,
+    wordlist: { words: [] as string[], blockedPhrases: [] as string[], version: 1 },
     snapshots: new Map<string, unknown[]>(),
     finished: new Map<string, Record<string, unknown>>(),
     notices: [] as { runId: string; by: string; day: number; code: string }[],
@@ -196,6 +198,8 @@ export function memoryPersistence() {
       else store.mutes.delete(`${a}>${b}`);
     },
     chatEnabled: async () => store.chatOn,
+    survivalEnabled: async () => store.survivalOn,
+    chatWordlist: async () => store.wordlist,
     async loadRun(runId) {
       const r = store.runs.get(runId);
       const m = store.runMeta.get(runId);

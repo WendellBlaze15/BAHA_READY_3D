@@ -66,6 +66,10 @@ export function buildRoutes(adminSecret: string) {
             maxClients: r.maxClients,
             locked: r.locked,
             phase: m.phase ?? 'lobby',
+            runId: m.runId ?? null,
+            day: m.day ?? 0,
+            flags: m.flags ?? [],
+            code: m.code ?? '',
             mode: m.mode,
             difficulty: m.difficulty,
             hostUsername: m.hostUsername,
@@ -124,6 +128,23 @@ export function buildRoutes(adminSecret: string) {
           : await leaveRunOffline(runId, userId);
         if (!r.ok) throw ctx.error(403, { message: 'not_member' });
         return ctx.json({ ok: true });
+      },
+    ),
+
+    hideChat: createEndpoint(
+      '/admin/runs/:runId/chat-hidden',
+      {
+        method: 'POST',
+        requireHeaders: true,
+        body: z.object({ messageId: z.number().int().min(1) }).strict(),
+      },
+      async (ctx) => {
+        if (!guard(ctx.headers)) throw ctx.error(401, { message: 'unauthorized' });
+        const { runId } = ctx.params;
+        if (!runIdOk(runId)) throw ctx.error(400, { message: 'bad_run_id' });
+        const live = await liveRoomOf(runId);
+        if (live) await matchMaker.remoteRoomCall(live, 'hideChat', [ctx.body.messageId]);
+        return ctx.json({ ok: true, live: !!live });
       },
     ),
 

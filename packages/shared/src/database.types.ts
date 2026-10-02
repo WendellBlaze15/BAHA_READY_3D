@@ -2428,6 +2428,10 @@ export type Database = {
     };
     Functions: {
       abandon_stale_attempts: { Args: never; Returns: number };
+      admin_hide_survival_chat: {
+        Args: { p_message_id: number; p_report_id: string };
+        Returns: string;
+      };
       admin_kpis: { Args: never; Returns: Json };
       admin_reset_mfa: { Args: { p_user_id: string }; Returns: number };
       admin_revoke_sessions: { Args: { p_user_id: string }; Returns: number };
@@ -2662,6 +2666,10 @@ export type Database = {
         Args: { p_config: Json; p_level_id: number; p_notes?: string };
         Returns: string;
       };
+      publish_survival_config: {
+        Args: { p_config: Json; p_notes: string };
+        Returns: number;
+      };
       purge_deleted_accounts: { Args: never; Returns: number };
       realtime_topic_id: { Args: { prefix: string }; Returns: string };
       recompute_progress: {
@@ -2677,6 +2685,7 @@ export type Database = {
         Args: { p_make_admin: boolean; p_user_id: string };
         Returns: undefined;
       };
+      survival_admin_analytics: { Args: { p_days?: number }; Returns: Json };
       survival_maintenance: { Args: never; Returns: undefined };
     };
     Enums: {

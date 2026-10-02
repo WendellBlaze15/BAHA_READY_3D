@@ -22,6 +22,7 @@ export type RateAction =
   | 'survival_join'
   | 'survival_resume'
   | 'survival_leave'
+  | 'survival_block'
   | 'general';
 
 type LimitCfg = { limit: number; window: Duration };
@@ -45,6 +46,7 @@ const DEFAULTS: Record<RateAction, LimitCfg> = {
   survival_join: { limit: 20, window: '10 m' },
   survival_resume: { limit: 10, window: '10 m' },
   survival_leave: { limit: 10, window: '1 h' },
+  survival_block: { limit: 30, window: '1 d' },
   general: { limit: 300, window: '5 m' },
 };
 

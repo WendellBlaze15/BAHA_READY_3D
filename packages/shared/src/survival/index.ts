@@ -18,6 +18,7 @@ export * from './map/query.ts';
 export { BARANGAY_1 } from './map/barangay-1.ts';
 export * from './chat/filter.ts';
 export { FILIPINO_WORDLIST, type FilWord } from './chat/wordlist-fil.ts';
+export * from './chat/admin-lists.ts';
 // Movement actions + stamina are shared with the Signal levels.
 export {
   initialSprintState,

@@ -31,5 +31,7 @@ export const RoomCode = {
   RESTED: 4111,
   LEFT_RUN: 4112,
   NOT_MEMBER: 4113,
+  SURVIVAL_DISABLED: 4114,
+  BLOCKED: 4115,
   SERVER_SHUTDOWN: 4199,
 } as const;

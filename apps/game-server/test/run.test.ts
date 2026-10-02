@@ -37,6 +37,7 @@ afterEach(async () => {
   svc.store.chatOn = true;
   svc.store.mutes.clear();
   svc.store.runs.clear();
+  svc.store.chat.length = 0;
   await colyseus.cleanup();
 });
 
@@ -134,6 +135,62 @@ describe('run lifecycle and synced world', () => {
     expect(room.state.players.get(U.p2)?.connected).toBe(false);
     expect(room.simulation!.players.get(U.p2)!.life).toBe('disconnected');
     expect(room.state.voteType).toBe('');
+  });
+
+  it('kill switch: running sessions get a warning (then save + close); lobbies close now', async () => {
+    const { host, room } = await startCoop();
+    const events = collect(host, 'event');
+    svc.store.survivalOn = false;
+    await (room as unknown as { checkKillSwitch(): Promise<void> }).checkKillSwitch();
+    await until(() => events.some((e) => e.kind === 'shutdown_warning'));
+    svc.store.survivalOn = true;
+    await (room as unknown as { checkKillSwitch(): Promise<void> }).checkKillSwitch();
+    await until(() => events.some((e) => e.kind === 'shutdown_cancelled'));
+
+    const lobbyHost = await sdkFor(U.p3).create('survival', createOpts());
+    const lobby = colyseus.getRoomById(lobbyHost.roomId) as unknown as SurvivalRoom;
+    const left = new Promise<number>((r) => lobbyHost.onLeave((c) => r(c)));
+    svc.store.survivalOn = false;
+    await (lobby as unknown as { checkKillSwitch(): Promise<void> }).checkKillSwitch();
+    expect(await left).toBe(4114);
+    svc.store.survivalOn = true;
+  });
+
+  it('blocked players are never placed in the same lobby', async () => {
+    const host = await sdkFor(U.host).create('survival', createOpts());
+    await wait(50);
+    svc.store.blocks.add(`${U.p2}>${U.host}`);
+    let code: number | undefined;
+    await sdkFor(U.p2)
+      .joinById(host.roomId, joinOpts)
+      .catch((e: { code?: number }) => (code = e.code));
+    expect(code).toBe(4115);
+    svc.store.blocks.clear();
+  });
+
+  it('admins can hide a delivered message from everyone in the room', async () => {
+    const { host, p2, room } = await startCoop();
+    const got = collect(p2, 'chat:message');
+    const hidden = collect(p2, 'chat:hidden');
+    host.send('chat:send', { text: 'kita tayo', clientMsgId: 'z' });
+    await until(() => got.length === 1);
+    (room as unknown as { hideChat(id: number): void }).hideChat(got[0].id);
+    await until(() => hidden.length === 1);
+    expect(hidden[0].id).toBe(got[0].id);
+  });
+
+  it('applies admin-managed filter words and blocked phrases', async () => {
+    const { host, p2 } = await coopLobby();
+    svc.store.wordlist = { words: ['kulit'], blockedPhrases: ['tagpuan natin'], version: 2 };
+    const got = collect(p2, 'chat:message');
+    const rejected = collect(host, 'chat:rejected');
+    host.send('chat:send', { text: 'ang kulit mo', clientMsgId: 'w1' });
+    await until(() => got.length === 1);
+    expect(got[0].status).toBe('masked');
+    await wait(1600);
+    host.send('chat:send', { text: 'sa tagpuan natin mamaya', clientMsgId: 'w2' });
+    await until(() => rejected.length === 1);
+    svc.store.wordlist = { words: [], blockedPhrases: [], version: 1 };
   });
 
   it('drops malformed intents', async () => {

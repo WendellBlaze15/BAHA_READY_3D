@@ -165,7 +165,7 @@ const sb = (u: U) =>
     auth: { persistSession: false, autoRefreshToken: false },
     global: { headers: { Authorization: `Bearer ${u.token}` } },
   });
-async function api(u: U, method: 'GET' | 'POST', p: string, data?: unknown) {
+async function api(u: U, method: 'GET' | 'POST' | 'DELETE', p: string, data?: unknown) {
   const res = await u.ctx!.request.fetch(`${BASE}${p}`, {
     method,
     headers: { Origin: BASE },
@@ -1016,6 +1016,64 @@ try {
     );
     const gd = await pageText(P, `/groups/${G}`);
     check('group page links assignments with their context', gd.text.length > 0);
+  });
+
+  await step('15. Survival Mode: players only; admin console; blocks', async () => {
+    // Access per role (Section 2): players in, everyone else out.
+    const hub = await pageText(P, '/survival');
+    check(
+      'player opens the Survival hub',
+      hub.url.endsWith('/survival') && /survival mode/i.test(hub.text),
+      hub.url,
+    );
+    for (const [who, u] of [
+      ['facilitator', F],
+      ['admin', A],
+      ['super admin', S],
+    ] as const) {
+      const r = await pageText(u, '/survival', 1500);
+      check(`${who} is redirected away from /survival`, !r.url.includes('/survival'), r.url);
+    }
+    const facApi = await api(F, 'POST', '/api/survival/blocks', { userId: P.id });
+    check('facilitator cannot use Survival APIs', facApi.status === 403, facApi.status);
+
+    // Admin console + staff APIs (aal2).
+    const con = await pageText(A, '/admin/survival');
+    check(
+      'admin opens the Survival console',
+      /live rooms/i.test(con.text) && /reports/i.test(con.text),
+      con.url,
+    );
+    const rooms = await api(A, 'GET', '/api/admin/survival/rooms');
+    check(
+      'admin reads live rooms (game server proxied)',
+      rooms.status === 200 || rooms.status === 503,
+      rooms.status,
+    );
+    const prooms = await api(P, 'GET', '/api/admin/survival/rooms');
+    check('players cannot read live rooms', prooms.status === 403, prooms.status);
+    const toggle = await api(A, 'POST', '/api/admin/survival/toggle', { enabled: true });
+    check('admin cannot flip the kill switch', toggle.status === 403, toggle.status);
+    const badCfg = await api(A, 'POST', '/api/admin/survival/config', {
+      config: { nope: 1 },
+      notes: 'qa invalid',
+    });
+    check('invalid config is rejected by the shared schema', badCfg.status === 422, badCfg.status);
+    const { data: an, error: anErr } = await sb(A).rpc('survival_admin_analytics', { p_days: 7 });
+    check('admin reads survival analytics', !anErr && !!an, anErr?.message);
+    const { error: pAn } = await sb(P).rpc('survival_admin_analytics', { p_days: 7 });
+    check('players cannot read survival analytics', !!pAn);
+
+    // Player blocks another player (and can undo it).
+    const blk = await api(P, 'POST', '/api/survival/blocks', { userId: P2.id });
+    check('player blocks a teammate', blk.status === 200, blk.status);
+    const { data: rows } = await sb(P).from('survival_blocks').select('blocked_id');
+    check(
+      'block is stored for the blocker only',
+      (rows ?? []).some((r) => r.blocked_id === P2.id),
+    );
+    const unblk = await api(P, 'DELETE', '/api/survival/blocks', { userId: P2.id });
+    check('player can unblock', unblk.status === 200, unblk.status);
   });
 } finally {
   // ── Cleanup ──

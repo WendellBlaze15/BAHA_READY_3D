@@ -98,7 +98,9 @@
       "left_run": "Umalis ka sa team.",
       "server_restarting": "Nagre-restart ang server. Naka-save ang laro — ituloy maya-maya.",
       "connection_lost": "Nawala ang koneksyon. Kumokonekta ulit…",
-      "generic": "May nangyaring mali. Subukan ulit."
+      "generic": "May nangyaring mali. Subukan ulit.",
+      "survival_disabled": "Pansamantalang naka-off ang Survival Mode.",
+      "blocked": "Hindi ka pwedeng sumali sa team na ito."
     },
     "lobby": {
       "title": "Lobby",
@@ -365,7 +367,9 @@
       "collapse": "Gumuho ang gusali!",
       "sleeping": "Natutulog si {name}.",
       "rest_scheduled": "Pumasa ang Pahinga vote: magse-save at matatapos ang laro pagsikat ng araw.",
-      "rest_ended_session": "Pahinga muna! Kita tayo sa susunod."
+      "rest_ended_session": "Pahinga muna! Kita tayo sa susunod.",
+      "shutdown_warning": "Pansamantalang ihihinto ang Survival Mode. Magse-save at magsasara ang laro sa loob ng {minutes} minuto.",
+      "shutdown_cancelled": "Hindi na tuloy — mananatiling naka-on ang Survival Mode."
     },
     "hazard": {
       "live_wire": "May spark! Live wire — huwag lumusong sa tubig na ito.",
@@ -408,7 +412,9 @@
         "afk": "Wala / hindi naglalaro",
         "offensive_name_avatar": "Nakakasakit na pangalan o avatar",
         "other": "Iba pa"
-      }
+      },
+      "block": "I-block",
+      "blocked": "Na-block. Hindi na kayo mapagsasama ulit."
     },
     "ping": {
       "item": "May gamit dito",
@@ -492,7 +498,160 @@
       "critters_scared": "Napalayo mo ang mga hayop.",
       "server_restarting": "Nagre-restart ang server — naka-save ang laro.",
       "loot": "Nakuha: {items}",
-      "nothingFound": "Walang mapapakinabangan dito."
+      "nothingFound": "Walang mapapakinabangan dito.",
+      "role_changed": "Nagbago ang role mo — matatapos mo ang session na ito, pero hindi ka na makakapagsimula o makakasali sa bagong laro."
+    }
+  },
+  "survivalAdmin": {
+    "title": "Survival Mode",
+    "lede": "Configuration, live rooms, mga report, restriction, kaligtasan ng chat at analytics.",
+    "tabs": {
+      "rooms": "Live rooms",
+      "reports": "Mga report",
+      "restrictions": "Mga restriction",
+      "config": "Configuration",
+      "chat": "Chat filter",
+      "analytics": "Analytics",
+      "system": "Kill switch"
+    },
+    "refresh": "I-refresh",
+    "empty": "Wala pa rito ngayon.",
+    "save": "I-save",
+    "saved": "Na-save",
+    "cancel": "Kanselahin",
+    "note": "Tala (kailangan)",
+    "notePlaceholder": "Ano ang nangyari at bakit",
+    "rooms": {
+      "code": "Code",
+      "run": "Run",
+      "mode": "Mode",
+      "difficulty": "Hirap",
+      "phase": "Phase",
+      "day": "Day",
+      "players": "Manlalaro",
+      "flags": "Flags",
+      "age": "Nagsimula",
+      "forceClose": "Isara agad",
+      "forceCloseHint": "Magse-save muna ang room. Kailangan ng re-authentication.",
+      "closed": "Naisara ang room.",
+      "unavailable": "Hindi maabot ang game server (baka natutulog — gigising ito sa susunod na laro).",
+      "memory": "Memory ng server: {mb} MB"
+    },
+    "reports": {
+      "open": "Bukas",
+      "all": "Lahat",
+      "high": "High priority",
+      "reason": "Dahilan",
+      "reporter": "Nag-report",
+      "reported": "Inireport",
+      "evidence": "Tingnan ang chat evidence",
+      "evidenceHint": "Itinatala sa audit log ang bawat pagtingin sa evidence.",
+      "hide": "Itago ang mensahe",
+      "hidden": "Nakatago",
+      "dismiss": "I-dismiss",
+      "warn": "Bigyan ng babala",
+      "restrictChat": "I-restrict ang chat",
+      "restrictSurvival": "I-restrict ang Survival",
+      "escalate": "I-escalate sa account review",
+      "days": "Tagal",
+      "permanent": "Permanente",
+      "daysN": "{n} araw",
+      "done": "Na-update ang report.",
+      "flags": "Auto-moderation flags",
+      "markReviewed": "Markahang nasuri",
+      "status": {
+        "open": "Bukas",
+        "dismissed": "Na-dismiss",
+        "warned": "Binigyan ng babala",
+        "restricted": "Na-restrict",
+        "escalated": "Na-escalate"
+      },
+      "filtered": "na-filter: {hits}"
+    },
+    "restrictions": {
+      "scope": "Saklaw",
+      "chat": "Chat",
+      "survival": "Survival",
+      "player": "Manlalaro",
+      "reason": "Dahilan",
+      "until": "Hanggang",
+      "forever": "Permanente",
+      "revoke": "Bawiin",
+      "revoked": "Nabawi ang restriction.",
+      "by": "Ni"
+    },
+    "config": {
+      "current": "Kasalukuyang bersyon: v{version}",
+      "versions": "Kasaysayan ng bersyon",
+      "publish": "I-publish ang bagong bersyon",
+      "notes": "Release notes",
+      "diff": "Mga pagbabago kumpara sa kasalukuyan",
+      "noChanges": "Wala pang pagbabago.",
+      "published": "Na-publish ang v{version}. Mananatili sa dating bersyon ang mga larong tumatakbo.",
+      "invalid": "Ayusin muna ang mga naka-highlight bago mag-publish.",
+      "reset": "Itapon ang mga pagbabago",
+      "pinned": "Mananatili ang mga tumatakbong laro sa bersyong sinimulan nila.",
+      "add": "Magdagdag",
+      "remove": "Alisin",
+      "yes": "Oo",
+      "no": "Hindi",
+      "section": {
+        "difficulties": "Mga hirap",
+        "stats": "Stats at pagbaba",
+        "bag": "Bag",
+        "items": "Mga item",
+        "recipes": "Mga recipe",
+        "boatStages": "Mga stage ng bangka",
+        "roles": "Mga role",
+        "melee": "Palakol at tulak",
+        "actions": "Paggalaw",
+        "camera": "Camera",
+        "chat": "Limitasyon ng chat",
+        "session": "Session",
+        "scoring": "Puntos",
+        "survivors": "Mga na-stranded",
+        "campUpgrades": "Upgrade ng camp",
+        "events": "Mga pangyayari",
+        "hazards": "Mga panganib"
+      }
+    },
+    "chat": {
+      "enabled": "Naka-on ang team text chat",
+      "enabledHint": "Kapag pinatay, mawawala ang text chat para sa lahat; gumagana pa rin ang quick chat.",
+      "words": "Dagdag na salitang itatago (isa bawat linya)",
+      "phrases": "Mga bawal na parirala (isa bawat linya) — tatanggihan ang mensaheng may ganito",
+      "test": "Subukan ang mensahe",
+      "testPlaceholder": "Mag-type para subukan sa filter",
+      "result": "Resulta",
+      "delivered": "Maipapadala nang buo",
+      "masked": "Maipapadala na may nakatagong salita",
+      "rejected": "Tatanggihan",
+      "version": "Bersyon ng listahan {version}"
+    },
+    "analytics": {
+      "window": "Huling {days} araw",
+      "started": "Nagsimula",
+      "completed": "Natapos",
+      "rescued": "Nailigtas",
+      "avgDays": "Karaniwang araw na nakaligtas",
+      "teamSize": "Rate ng Buong Pagliligtas ayon sa laki ng team",
+      "players": "{n} manlalaro",
+      "runs": "{n} laro",
+      "mistakes": "Pinakamadalas na pagkakamali",
+      "good": "Pinakamadalas na tamang gawain",
+      "openReports": "Bukas na report",
+      "openFlags": "Bukas na flag",
+      "activeRestrictions": "Aktibong restriction"
+    },
+    "system": {
+      "enabled": "NAKA-ON ang Survival Mode",
+      "disabled": "NAKA-OFF ang Survival Mode",
+      "toggleOn": "I-on ang Survival Mode",
+      "toggleOff": "I-off ang Survival Mode",
+      "hint": "Bibigyan ng 5-minutong babala ang mga tumatakbong laro, saka magse-save at magsasara. Agad na magsasara ang mga lobby. Kailangan ng re-authentication.",
+      "messageFil": "Mensahe sa manlalaro (Filipino)",
+      "messageEn": "Mensahe sa manlalaro (English)",
+      "done": "Na-update ang kill switch."
     }
   }
 }

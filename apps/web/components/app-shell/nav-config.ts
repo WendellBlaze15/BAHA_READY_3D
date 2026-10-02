@@ -78,6 +78,12 @@ const ADMIN: NavItem[] = [
   { href: '/admin/audit', labelKey: 'nav.adminAudit', icon: ScrollText },
 ];
 
+const ADMIN_SURVIVAL: NavItem = {
+  href: '/admin/survival',
+  labelKey: 'nav.adminSurvival',
+  icon: LifeBuoy,
+};
+
 const SUPER: NavItem[] = [
   { href: '/super', labelKey: 'nav.superConsole', icon: ShieldCheck, exact: true },
   { href: '/super/admins', labelKey: 'nav.superAdmins', icon: KeyRound },
@@ -92,7 +98,11 @@ export function sectionsFor(claims: AppClaims): NavSection[] {
   const sections: NavSection[] = [{ titleKey: 'nav.sectionPlay', items: play }];
   if (can('groups.manage'))
     sections.push({ titleKey: 'nav.sectionFacilitator', items: FACILITATOR });
-  if (can('content.manage')) sections.push({ titleKey: 'nav.sectionAdmin', items: ADMIN });
+  if (can('content.manage'))
+    sections.push({
+      titleKey: 'nav.sectionAdmin',
+      items: can('survival.rooms.monitor') ? [...ADMIN, ADMIN_SURVIVAL] : ADMIN,
+    });
   if (claims.user_role === 'super_admin')
     sections.push({ titleKey: 'nav.sectionSuper', items: SUPER });
   return sections;

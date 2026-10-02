@@ -98,7 +98,9 @@
       "left_run": "You left the team.",
       "server_restarting": "The server is restarting. Your game is saved — continue in a moment.",
       "connection_lost": "Connection lost. Reconnecting…",
-      "generic": "Something went wrong. Please try again."
+      "generic": "Something went wrong. Please try again.",
+      "survival_disabled": "Survival Mode is temporarily off.",
+      "blocked": "You can't join this team."
     },
     "lobby": {
       "title": "Lobby",
@@ -365,7 +367,9 @@
       "collapse": "The building collapsed!",
       "sleeping": "{name} is sleeping.",
       "rest_scheduled": "Rest vote passed: the game saves and ends at dawn.",
-      "rest_ended_session": "Rest time! See you next session."
+      "rest_ended_session": "Rest time! See you next session.",
+      "shutdown_warning": "Survival Mode is being paused. The game saves and closes in {minutes} minutes.",
+      "shutdown_cancelled": "Never mind — Survival Mode stays on."
     },
     "hazard": {
       "live_wire": "Sparks! Live wires — stay out of this water.",
@@ -408,7 +412,9 @@
         "afk": "Away / not playing",
         "offensive_name_avatar": "Offensive name or avatar",
         "other": "Something else"
-      }
+      },
+      "block": "Block",
+      "blocked": "Blocked. You won't be placed together again."
     },
     "ping": {
       "item": "Item here",
@@ -492,7 +498,160 @@
       "critters_scared": "You scared the animals away.",
       "server_restarting": "The server is restarting — your game is saved.",
       "loot": "Found: {items}",
-      "nothingFound": "Nothing useful here."
+      "nothingFound": "Nothing useful here.",
+      "role_changed": "Your role changed — you can finish this session, but you can't start or join new Survival games."
+    }
+  },
+  "survivalAdmin": {
+    "title": "Survival Mode",
+    "lede": "Configuration, live rooms, reports, restrictions, chat safety and analytics.",
+    "tabs": {
+      "rooms": "Live rooms",
+      "reports": "Reports",
+      "restrictions": "Restrictions",
+      "config": "Configuration",
+      "chat": "Chat filter",
+      "analytics": "Analytics",
+      "system": "Kill switch"
+    },
+    "refresh": "Refresh",
+    "empty": "Nothing here right now.",
+    "save": "Save",
+    "saved": "Saved",
+    "cancel": "Cancel",
+    "note": "Note (required)",
+    "notePlaceholder": "What happened and why",
+    "rooms": {
+      "code": "Code",
+      "run": "Run",
+      "mode": "Mode",
+      "difficulty": "Difficulty",
+      "phase": "Phase",
+      "day": "Day",
+      "players": "Players",
+      "flags": "Flags",
+      "age": "Started",
+      "forceClose": "Force close",
+      "forceCloseHint": "The room saves first. Requires re-authentication.",
+      "closed": "Room closed.",
+      "unavailable": "The game server is not reachable (it may be asleep — it wakes on the next game).",
+      "memory": "Server memory: {mb} MB"
+    },
+    "reports": {
+      "open": "Open",
+      "all": "All",
+      "high": "High priority",
+      "reason": "Reason",
+      "reporter": "Reporter",
+      "reported": "Reported player",
+      "evidence": "View chat evidence",
+      "evidenceHint": "Every evidence view is recorded in the audit log.",
+      "hide": "Hide message",
+      "hidden": "Hidden",
+      "dismiss": "Dismiss",
+      "warn": "Warn",
+      "restrictChat": "Restrict chat",
+      "restrictSurvival": "Restrict Survival",
+      "escalate": "Escalate to account review",
+      "days": "Duration",
+      "permanent": "Permanent",
+      "daysN": "{n} days",
+      "done": "Report updated.",
+      "flags": "Auto-moderation flags",
+      "markReviewed": "Mark reviewed",
+      "status": {
+        "open": "Open",
+        "dismissed": "Dismissed",
+        "warned": "Warned",
+        "restricted": "Restricted",
+        "escalated": "Escalated"
+      },
+      "filtered": "filtered: {hits}"
+    },
+    "restrictions": {
+      "scope": "Scope",
+      "chat": "Chat",
+      "survival": "Survival",
+      "player": "Player",
+      "reason": "Reason",
+      "until": "Until",
+      "forever": "Permanent",
+      "revoke": "Revoke",
+      "revoked": "Restriction revoked.",
+      "by": "By"
+    },
+    "config": {
+      "current": "Current version: v{version}",
+      "versions": "Version history",
+      "publish": "Publish new version",
+      "notes": "Release notes",
+      "diff": "Changes vs current",
+      "noChanges": "No changes yet.",
+      "published": "Published v{version}. Running games keep their version.",
+      "invalid": "Fix the highlighted values before publishing.",
+      "reset": "Discard changes",
+      "pinned": "Running games keep the version they started with.",
+      "add": "Add",
+      "remove": "Remove",
+      "yes": "Yes",
+      "no": "No",
+      "section": {
+        "difficulties": "Difficulties",
+        "stats": "Stats & drains",
+        "bag": "Bag",
+        "items": "Items",
+        "recipes": "Recipes",
+        "boatStages": "Boat stages",
+        "roles": "Roles",
+        "melee": "Axe & shove",
+        "actions": "Movement",
+        "camera": "Camera",
+        "chat": "Chat limits",
+        "session": "Session",
+        "scoring": "Scoring",
+        "survivors": "Stranded survivors",
+        "campUpgrades": "Camp upgrades",
+        "events": "Events",
+        "hazards": "Hazards"
+      }
+    },
+    "chat": {
+      "enabled": "Team text chat enabled",
+      "enabledHint": "Turning this off hides text chat for everyone; quick chat keeps working.",
+      "words": "Extra words to hide (one per line)",
+      "phrases": "Blocked phrases (one per line) — messages containing them are rejected",
+      "test": "Test a message",
+      "testPlaceholder": "Type a message to try it against the filter",
+      "result": "Result",
+      "delivered": "Delivered as typed",
+      "masked": "Delivered with words hidden",
+      "rejected": "Rejected",
+      "version": "List version {version}"
+    },
+    "analytics": {
+      "window": "Last {days} days",
+      "started": "Started",
+      "completed": "Finished",
+      "rescued": "Rescued",
+      "avgDays": "Average days survived",
+      "teamSize": "Full-rescue rate by team size",
+      "players": "{n} players",
+      "runs": "{n} runs",
+      "mistakes": "Most common mistakes",
+      "good": "Most common good actions",
+      "openReports": "Open reports",
+      "openFlags": "Open flags",
+      "activeRestrictions": "Active restrictions"
+    },
+    "system": {
+      "enabled": "Survival Mode is ON",
+      "disabled": "Survival Mode is OFF",
+      "toggleOn": "Turn Survival Mode on",
+      "toggleOff": "Turn Survival Mode off",
+      "hint": "Running games get a 5-minute warning, then save and close. Lobbies close right away. Requires re-authentication.",
+      "messageFil": "Message shown to players (Filipino)",
+      "messageEn": "Message shown to players (English)",
+      "done": "Kill switch updated."
     }
   }
 }

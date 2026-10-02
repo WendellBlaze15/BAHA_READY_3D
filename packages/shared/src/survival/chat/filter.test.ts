@@ -92,6 +92,25 @@ describe('personal info and contact are rejected', () => {
   });
 });
 
+describe('admin lists', () => {
+  it('rejects admin-blocked phrases and masks admin-added words', () => {
+    expect(
+      filterChatMessage('punta ka sa secret spot', {
+        maxLength: 150,
+        blockedPhrases: ['Secret Spot'],
+      }),
+    ).toMatchObject({
+      status: 'rejected',
+      hits: ['blocked_phrase'],
+    });
+    const r = filterChatMessage('ang kulit mo', {
+      maxLength: 150,
+      extraWords: [{ word: 'kulit', patterns: ['|kulit|'] }],
+    });
+    expect(r.status).toBe('masked');
+  });
+});
+
 describe('plain text rules', () => {
   it('strips HTML and markdown, collapses long repeats', () => {
     expect(f('<b>tulong</b> **dito**')).toMatchObject({ status: 'delivered', text: 'tulong dito' });

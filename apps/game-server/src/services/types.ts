@@ -1,4 +1,4 @@
-import type { SurvivalConfig } from '@baha/shared/survival';
+import type { ChatWordlist, SurvivalConfig } from '@baha/shared/survival';
 
 /**
  * Everything the rooms need from the outside world. Production wires Supabase + Upstash
@@ -24,7 +24,11 @@ export interface PlayerProfile {
 
 export type Eligibility =
   | { ok: true; profile: PlayerProfile }
-  | { ok: false; reason: 'not_eligible' | 'survival_disabled' };
+  | {
+      ok: false;
+      /** role_changed: became staff (may finish the current session, Section 2.2). */
+      reason: 'not_eligible' | 'survival_disabled' | 'role_changed';
+    };
 
 export interface CodeStore {
   /** Reserves a free code for a room; returns null when the space is exhausted. */
@@ -103,6 +107,10 @@ export interface Persistence {
   setMute(muterId: string, mutedId: string, on: boolean): Promise<void>;
   /** survival_chat_enabled (cached). */
   chatEnabled(): Promise<boolean>;
+  /** survival_enabled kill switch (cached). */
+  survivalEnabled(): Promise<boolean>;
+  /** Admin-managed filter additions (cached). */
+  chatWordlist(): Promise<ChatWordlist>;
 
   // ── Phase 7: runs, snapshots, results ──
   loadRun(runId: string): Promise<RunRow | null>;

@@ -24,20 +24,24 @@ export async function requireSurvivalPlayer() {
   return ctx;
 }
 
-/** Server-to-server call to the game server's /internal API (never from the browser). */
-export async function gameServer<T>(path: string, body: unknown): Promise<T> {
+/** Server-to-server call to the game server's /internal + /admin API (never from the browser). */
+export async function gameServer<T>(
+  path: string,
+  body?: unknown,
+  method: 'GET' | 'POST' = 'POST',
+): Promise<T> {
   const env = serverEnv();
   if (!env.GAME_SERVER_HTTP_URL || !env.GAME_SERVER_ADMIN_SECRET)
     throw fail('MAINTENANCE', 'survival.errors.unavailable');
   let res: Response;
   try {
     res = await fetch(`${env.GAME_SERVER_HTTP_URL.replace(/\/+$/, '')}${path}`, {
-      method: 'POST',
+      method,
       headers: {
         authorization: `Bearer ${env.GAME_SERVER_ADMIN_SECRET}`,
         'content-type': 'application/json',
       },
-      body: JSON.stringify(body),
+      body: method === 'POST' ? JSON.stringify(body ?? {}) : undefined,
       cache: 'no-store',
       // The server sleeps when idle; the first request wakes it.
       signal: AbortSignal.timeout(20_000),
@@ -47,6 +51,7 @@ export async function gameServer<T>(path: string, body: unknown): Promise<T> {
   }
   const data = (await res.json().catch(() => ({}))) as T & { message?: string };
   if (res.ok) return data;
+  if (res.status === 404) throw fail('NOT_FOUND', 'errors.not_found');
   if (res.status === 403) throw fail('FORBIDDEN', 'survival.errors.not_member');
   if (res.status === 410) throw fail('CONFLICT', 'survival.errors.run_not_active');
   if (res.status === 429) throw fail('RATE_LIMITED', 'errors.rate_limited', { retry_after: 60 });

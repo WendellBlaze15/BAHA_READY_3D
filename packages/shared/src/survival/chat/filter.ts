@@ -25,7 +25,8 @@ export type FilterHit =
   | 'contact_invite'
   | 'address'
   | 'location_request'
-  | 'photo_request';
+  | 'photo_request'
+  | 'blocked_phrase';
 
 export type FilterResult =
   | { status: 'delivered' | 'masked'; text: string; hits: FilterHit[]; maskedWords: number }
@@ -83,7 +84,12 @@ function normalize(s: string) {
 
 export function filterChatMessage(
   raw: string,
-  opts: { maxLength: number; extraWords?: FilWord[] },
+  opts: {
+    maxLength: number;
+    extraWords?: FilWord[];
+    /** Admin-managed phrases that are always rejected (plain text, case-insensitive). */
+    blockedPhrases?: string[];
+  },
 ): FilterResult {
   // Plain text: strip HTML tags and markdown emphasis, collapse whitespace and long repeats.
   let text = raw
@@ -106,6 +112,8 @@ export function filterChatMessage(
   if (ADDRESS_RE.test(n)) hits.push('address');
   if (LOCATION_RE.test(n)) hits.push('location_request');
   if (PHOTO_RE.test(n)) hits.push('photo_request');
+  if (opts.blockedPhrases?.some((p) => p.trim() && n.includes(p.trim().toLowerCase())))
+    hits.push('blocked_phrase');
   if (hits.length) return { status: 'rejected', reasonKey: 'personal_info', hits };
 
   const matcher = opts.extraWords?.length

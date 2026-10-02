@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Flag, MessageCircle, Send, VolumeX, Volume2 } from 'lucide-react';
+import { Ban, Flag, MessageCircle, Send, VolumeX, Volume2 } from 'lucide-react';
+import { api } from '@/lib/survival/client';
 import { QUICK_CHAT } from '@baha/shared/survival';
 import { mapValues, useRoomState, useSession, type ChatLine } from '@/game/survival/session-store';
 import { Button } from '@/components/ui/button';
@@ -130,6 +131,26 @@ export function ChatPanel({ overlay }: { overlay: boolean }) {
                 {muted.has(l.senderId) ? <Volume2 aria-hidden /> : <VolumeX aria-hidden />}
                 {muted.has(l.senderId) ? t('chat.unmute') : t('chat.mute')}
               </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={async () => {
+                  const blocked = l.senderId!;
+                  try {
+                    await api('/api/survival/blocks', {
+                      method: 'POST',
+                      body: JSON.stringify({ userId: blocked }),
+                    });
+                    // Hide their chat right away; the server never places you together again.
+                    const m = new Set(useSession.getState().muted);
+                    m.add(blocked);
+                    useSession.getState().set({ muted: m });
+                    useSession.getState().toast({ tone: 'good', key: 'chat.blocked' });
+                  } catch {
+                    useSession.getState().toast({ tone: 'warn', key: 'chat.reportFailed' });
+                  }
+                }}
+              >
+                <Ban aria-hidden /> {t('chat.block')}
+              </DropdownMenuItem>
               {typeof l.id === 'number' && (
                 <>
                   <DropdownMenuSeparator />
@@ -153,26 +174,28 @@ export function ChatPanel({ overlay }: { overlay: boolean }) {
 
   return (
     <>
-      <Button
-        onClick={() => setOpen(true)}
-        size="lg"
-        variant={overlay ? 'secondary' : 'default'}
-        className={cn(
-          'fixed z-[60] h-12 rounded-full shadow-lg',
-          overlay
-            ? 'top-[max(0.5rem,env(safe-area-inset-top))] right-[max(0.5rem,env(safe-area-inset-right))]'
-            : 'right-4 bottom-20 sm:bottom-6',
-        )}
-        aria-label={t('chat.open')}
-      >
-        <MessageCircle aria-hidden />
-        <span className="hidden sm:inline">{t('chat.title')}</span>
-        {unread > 0 && (
-          <span className="bg-destructive rounded-full px-1.5 text-xs text-white">
-            {t('chat.unread', { count: unread })}
-          </span>
-        )}
-      </Button>
+      {!open && (
+        <Button
+          onClick={() => setOpen(true)}
+          size="lg"
+          variant={overlay ? 'secondary' : 'default'}
+          className={cn(
+            'fixed z-[60] h-12 rounded-full shadow-lg',
+            overlay
+              ? 'top-[max(0.5rem,env(safe-area-inset-top))] right-[max(0.5rem,env(safe-area-inset-right))]'
+              : 'right-4 bottom-20 sm:bottom-6',
+          )}
+          aria-label={t('chat.open')}
+        >
+          <MessageCircle aria-hidden />
+          <span className="hidden sm:inline">{t('chat.title')}</span>
+          {unread > 0 && (
+            <span className="bg-destructive rounded-full px-1.5 text-xs text-white">
+              {t('chat.unread', { count: unread })}
+            </span>
+          )}
+        </Button>
+      )}
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-md">

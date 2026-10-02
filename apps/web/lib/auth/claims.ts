@@ -33,7 +33,13 @@ export type Permission =
   | 'announcements.system'
   | 'admins.manage'
   | 'system.manage'
-  | 'audit.read_all';
+  | 'audit.read_all'
+  | 'survival.play'
+  | 'survival.config.manage'
+  | 'survival.reports.review'
+  | 'survival.rooms.monitor'
+  | 'survival.rooms.force_close'
+  | 'survival.system.toggle';
 
 export const STAFF_ROLES = ['facilitator', 'admin', 'super_admin'] as const;
 
