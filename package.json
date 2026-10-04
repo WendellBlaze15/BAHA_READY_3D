@@ -31,7 +31,7 @@
     "@commitlint/cli": "^21.2.3",
     "@commitlint/config-conventional": "^21.2.3",
     "@playwright/test": "^1.63.0",
-    "@types/node": "^20.19.43",
+    "@types/node": "^26.6.3",
     "@types/pg": "^8.23.1",
     "dotenv": "^18.0.4",
     "husky": "^9.1.7",
