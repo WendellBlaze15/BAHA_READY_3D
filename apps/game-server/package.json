@@ -22,7 +22,7 @@
     "fflate": "0.8.3",
     "jose": "6.2.12",
     "tsx": "^4.23.15",
-    "zod": "4.6.5"
+    "zod": "4.6.6"
   },
   "devDependencies": {
     "@colyseus/sdk": "0.18.4",
